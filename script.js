@@ -1862,38 +1862,38 @@ function addNewSupplier() {
 
 function showAddPurchaseOrderModal(section) {
     const modal = document.getElementById('addPurchaseOrderModal');
-    if (!modal) return;
-    
-    document.getElementById('addPurchaseOrderForm').reset();
-    
-    // Populate supplier dropdown
-    const supplierSelect = document.getElementById('addPurchaseOrderSupplier');
-    if (supplierSelect) {
-        supplierSelect.innerHTML = '<option value="">Select Supplier</option>';
+    if (modal) {
+        document.getElementById('addPurchaseOrderForm').reset();
         
-        suppliers[section].forEach(supplier => {
-            const option = document.createElement('option');
-            option.value = supplier.id;
-            option.textContent = supplier.name;
-            supplierSelect.appendChild(option);
-        });
-    }
-    
-    // Populate product dropdown
-    const productSelect = document.getElementById('addPurchaseOrderProduct');
-    if (productSelect) {
-        productSelect.innerHTML = '<option value="">Select Product</option>';
+        // Populate supplier dropdown
+        const supplierSelect = document.getElementById('addPurchaseOrderSupplier');
+        if (supplierSelect) {
+            supplierSelect.innerHTML = '<option value="">Select Supplier</option>';
+            
+            suppliers[section].forEach(supplier => {
+                const option = document.createElement('option');
+                option.value = supplier.id;
+                option.textContent = supplier.name;
+                supplierSelect.appendChild(option);
+            });
+        }
         
-        inventory[section].forEach(item => {
-            const option = document.createElement('option');
-            option.value = item.id;
-            option.textContent = `${item.name} (Current Stock: ${item.stock})`;
-            productSelect.appendChild(option);
-        });
+        // Populate product dropdown
+        const productSelect = document.getElementById('addPurchaseOrderProduct');
+        if (productSelect) {
+            productSelect.innerHTML = '<option value="">Select Product</option>';
+            
+            inventory[section].forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = `${item.name} (Current Stock: ${item.stock})`;
+                productSelect.appendChild(option);
+            });
+        }
+        
+        modal.setAttribute('data-section', section);
+        modal.classList.add('active');
     }
-    
-    modal.setAttribute('data-section', section);
-    modal.classList.add('active');
 }
 
 function addNewPurchaseOrder() {
