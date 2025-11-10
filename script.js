@@ -218,15 +218,30 @@ function updateCategoryInventorySummary(section) {
     const totalProfit = totalValue - totalCost;
     const profitMargin = totalValue > 0 ? (totalProfit / totalValue) * 100 : 0;
     
-    // Update the summary cards
-    document.getElementById(`${section}-total-products`).textContent = totalProducts;
-    document.getElementById(`${section}-total-value`).textContent = `₦${totalValue.toFixed(2)}`;
-    document.getElementById(`${section}-total-cost`).textContent = `₦${totalCost.toFixed(2)}`;
-    document.getElementById(`${section}-total-profit`).textContent = `₦${totalProfit.toFixed(2)}`;
-    document.getElementById(`${section}-profit-margin`).textContent = `${profitMargin.toFixed(1)}%`;
-    document.getElementById(`${section}-low-stock-count`).textContent = lowStockCount;
-    document.getElementById(`${section}-expiring-soon-count`).textContent = expiringSoonCount;
-    document.getElementById(`${section}-expired-count`).textContent = expiredCount;
+    // Update the summary cards with null checks
+    const totalProductsEl = document.getElementById(`${section}-total-products`);
+    if (totalProductsEl) totalProductsEl.textContent = totalProducts;
+    
+    const totalValueEl = document.getElementById(`${section}-total-value`);
+    if (totalValueEl) totalValueEl.textContent = `₦${totalValue.toFixed(2)}`;
+    
+    const totalCostEl = document.getElementById(`${section}-total-cost`);
+    if (totalCostEl) totalCostEl.textContent = `₦${totalCost.toFixed(2)}`;
+    
+    const totalProfitEl = document.getElementById(`${section}-total-profit`);
+    if (totalProfitEl) totalProfitEl.textContent = `₦${totalProfit.toFixed(2)}`;
+    
+    const profitMarginEl = document.getElementById(`${section}-profit-margin`);
+    if (profitMarginEl) profitMarginEl.textContent = `${profitMargin.toFixed(1)}%`;
+    
+    const lowStockCountEl = document.getElementById(`${section}-low-stock-count`);
+    if (lowStockCountEl) lowStockCountEl.textContent = lowStockCount;
+    
+    const expiringSoonCountEl = document.getElementById(`${section}-expiring-soon-count`);
+    if (expiringSoonCountEl) expiringSoonCountEl.textContent = expiringSoonCount;
+    
+    const expiredCountEl = document.getElementById(`${section}-expired-count`);
+    if (expiredCountEl) expiredCountEl.textContent = expiredCount;
 }
 
 // ===================================================================
@@ -500,23 +515,36 @@ function updateUserInfo(user) {
     const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Admin User';
     const email = user.email || '';
     const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase();
-    document.getElementById('userName').textContent = displayName;
-    document.getElementById('userAvatar').textContent = initials;
+    
+    const userNameEl = document.getElementById('userName');
+    if (userNameEl) userNameEl.textContent = displayName;
+    
+    const userAvatarEl = document.getElementById('userAvatar');
+    if (userAvatarEl) userAvatarEl.textContent = initials;
+    
     sections.forEach(section => {
-        document.getElementById(`${section}-profile-name`).textContent = displayName;
-        document.getElementById(`${section}-profile-avatar`).textContent = initials;
-        document.getElementById(`${section}-email`).value = email;
+        const profileNameEl = document.getElementById(`${section}-profile-name`);
+        if (profileNameEl) profileNameEl.textContent = displayName;
+        
+        const profileAvatarEl = document.getElementById(`${section}-profile-avatar`);
+        if (profileAvatarEl) profileAvatarEl.textContent = initials;
+        
+        const emailEl = document.getElementById(`${section}-email`);
+        if (emailEl) emailEl.value = email;
     });
 }
 
 // Handle online/offline status
 function handleOnlineStatus() {
-    document.getElementById('offlineIndicator').classList.remove('show');
+    const offlineIndicator = document.getElementById('offlineIndicator');
+    if (offlineIndicator) offlineIndicator.classList.remove('show');
     showNotification('Connection restored. Syncing data...', 'info');
     syncPendingChanges();
 }
+
 function handleOfflineStatus() {
-    document.getElementById('offlineIndicator').classList.add('show');
+    const offlineIndicator = document.getElementById('offlineIndicator');
+    if (offlineIndicator) offlineIndicator.classList.add('show');
     showNotification('You\'re now offline. Changes will be saved locally.', 'warning');
 }
 
@@ -527,7 +555,9 @@ async function syncPendingChanges() {
         return;
     }
     
-    document.getElementById('syncStatus').classList.add('show');
+    const syncStatus = document.getElementById('syncStatus');
+    if (syncStatus) syncStatus.classList.add('show');
+    
     const pendingChanges = loadFromLocalStorage('pendingChanges', {});
     
     if (Object.keys(pendingChanges).length > 0) {
@@ -536,6 +566,12 @@ async function syncPendingChanges() {
         
         // Process each table with pending changes
         Object.keys(pendingChanges).forEach(table => {
+            // Skip tables that don't exist in Supabase
+            if (table === 'suppliers' || table === 'purchase_orders' || table === 'purchase_data') {
+                console.log(`Skipping ${table} as it may not exist in Supabase yet`);
+                return;
+            }
+            
             // Process new documents
             if (pendingChanges[table].new && pendingChanges[table].new.length > 0) {
                 pendingChanges[table].new.forEach(data => {
@@ -553,16 +589,12 @@ async function syncPendingChanges() {
                                 console.log(`Successfully synced new ${table} record:`, result);
                                 
                                 // Update local data with real ID
-                                if (table === 'inventory' || table === 'suppliers' || table === 'purchase_orders') {
-                                    const dataArray = table === 'inventory' ? inventory[data.section] : 
-                                                     table === 'suppliers' ? suppliers[data.section] : 
-                                                     purchaseOrders[data.section];
-                                    
-                                    const index = dataArray.findIndex(item => item.id === data.id);
+                                if (table === 'inventory') {
+                                    const index = inventory[data.section].findIndex(item => item.id === data.id);
                                     if (index !== -1) {
-                                        dataArray[index].id = result[0].id;
-                                        dataArray[index].isOffline = false;
-                                        saveToLocalStorage(`${table}_${data.section}`, dataArray);
+                                        inventory[data.section][index].id = result[0].id;
+                                        inventory[data.section][index].isOffline = false;
+                                        saveToLocalStorage(`inventory_${data.section}`, inventory[data.section]);
                                     }
                                 }
                                 return result[0];
@@ -598,17 +630,17 @@ async function syncPendingChanges() {
         try {
             await Promise.all(promises);
             localStorage.removeItem('pendingChanges');
-            document.getElementById('syncStatus').classList.remove('show');
+            if (syncStatus) syncStatus.classList.remove('show');
             showNotification('All changes synced successfully', 'success');
             // Reload data to ensure UI is updated
             loadDataFromSupabase();
         } catch (error) {
             console.error('Error syncing changes:', error);
-            document.getElementById('syncStatus').classList.remove('show');
+            if (syncStatus) syncStatus.classList.remove('show');
             showNotification('Error syncing changes. Please try again later.', 'error');
         }
     } else {
-        document.getElementById('syncStatus').classList.remove('show');
+        if (syncStatus) syncStatus.classList.remove('show');
     }
 }
 
@@ -702,99 +734,6 @@ async function loadDataFromSupabase() {
                 });
         });
         
-        // Load purchase data
-        sections.forEach(section => {
-            supabase
-                .from('purchase_data')
-                .select('*')
-                .eq('id', section)
-                .single()
-                .then(({ data, error }) => {
-                    if (error && error.code !== 'PGRST116') { // Not found error
-                        console.error(`Error loading ${section} purchase data:`, error);
-                        showNotification(`Error loading ${section} purchase data. Using cached data.`, 'warning');
-                        return;
-                    }
-                    
-                    console.log(`Loaded ${section} purchase data:`, data);
-                    if (data) {
-                        purchaseData[section] = {
-                            totalPurchases: data.totalPurchases || 0,
-                            totalTransactions: data.totalTransactions || 0,
-                            avgTransaction: data.avgTransaction || 0,
-                            topSupplier: data.topSupplier || '-',
-                            dailyPurchases: data.dailyPurchases || 0,
-                            dailyTransactions: data.dailyTransactions || 0
-                        };
-                        saveToLocalStorage(`purchaseData_${section}`, purchaseData[section]);
-                        updatePurchaseReports(section);
-                        updateDepartmentStats(section);
-                    } else {
-                        // If no data exists, create initial record
-                        const initialPurchaseData = {
-                            id: section,
-                            totalPurchases: 0,
-                            totalTransactions: 0,
-                            avgTransaction: 0,
-                            topSupplier: '-',
-                            dailyPurchases: 0,
-                            dailyTransactions: 0
-                        };
-                        supabase
-                            .from('purchase_data')
-                            .insert(initialPurchaseData)
-                            .then(({ data, error }) => {
-                                if (!error) {
-                                    purchaseData[section] = initialPurchaseData;
-                                    saveToLocalStorage(`purchaseData_${section}`, purchaseData[section]);
-                                    updatePurchaseReports(section);
-                                    updateDepartmentStats(section);
-                                }
-                            });
-                    }
-                });
-        });
-        
-        // Load suppliers
-        sections.forEach(section => {
-            supabase
-                .from('suppliers')
-                .select('*')
-                .eq('section', section)
-                .then(({ data, error }) => {
-                    if (error) {
-                        console.error(`Error loading ${section} suppliers:`, error);
-                        showNotification(`Error loading ${section} suppliers. Using cached data.`, 'warning');
-                        return;
-                    }
-                    
-                    console.log(`Loaded ${section} suppliers:`, data);
-                    suppliers[section] = data || [];
-                    saveToLocalStorage(`suppliers_${section}`, suppliers[section]);
-                    loadSuppliersTable(section);
-                });
-        });
-        
-        // Load purchase orders
-        sections.forEach(section => {
-            supabase
-                .from('purchase_orders')
-                .select('*')
-                .eq('section', section)
-                .then(({ data, error }) => {
-                    if (error) {
-                        console.error(`Error loading ${section} purchase orders:`, error);
-                        showNotification(`Error loading ${section} purchase orders. Using cached data.`, 'warning');
-                        return;
-                    }
-                    
-                    console.log(`Loaded ${section} purchase orders:`, data);
-                    purchaseOrders[section] = data || [];
-                    saveToLocalStorage(`purchaseOrders_${section}`, purchaseOrders[section]);
-                    loadPurchaseOrdersTable(section);
-                });
-        });
-        
         // Load user data
         sections.forEach(section => {
             supabase
@@ -871,39 +810,57 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Login form
-    document.getElementById('emailLoginForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const errorElement = document.getElementById('email-login-error');
-        document.getElementById('emailLoginBtn').disabled = true;
-        document.getElementById('emailLoginBtn').textContent = 'Signing In...';
-        
-        supabase.auth.signInWithPassword({ email, password })
-            .then(({ data, error }) => {
-                if (error) {
-                    errorElement.textContent = error.message;
-                    document.getElementById('emailLoginBtn').disabled = false;
-                    document.getElementById('emailLoginBtn').textContent = 'Sign In';
-                }
-            })
-            .catch(error => {
-                errorElement.textContent = error.message;
-                document.getElementById('emailLoginBtn').disabled = false;
-                document.getElementById('emailLoginBtn').textContent = 'Sign In';
-            });
-    });
+    const emailLoginForm = document.getElementById('emailLoginForm');
+    if (emailLoginForm) {
+        emailLoginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorElement = document.getElementById('email-login-error');
+            const loginBtn = document.getElementById('emailLoginBtn');
+            
+            if (loginBtn) {
+                loginBtn.disabled = true;
+                loginBtn.textContent = 'Signing In...';
+            }
+            
+            supabase.auth.signInWithPassword({ email, password })
+                .then(({ data, error }) => {
+                    if (error) {
+                        if (errorElement) errorElement.textContent = error.message;
+                        if (loginBtn) {
+                            loginBtn.disabled = false;
+                            loginBtn.textContent = 'Sign In';
+                        }
+                    }
+                })
+                .catch(error => {
+                    if (errorElement) errorElement.textContent = error.message;
+                    if (loginBtn) {
+                        loginBtn.disabled = false;
+                        loginBtn.textContent = 'Sign In';
+                    }
+                });
+        });
+    }
 
     // Forgot password
-    document.getElementById('forgotPasswordLink').addEventListener('click', function(e) {
-        e.preventDefault();
-        document.getElementById('forgotPasswordModal').classList.add('active');
-    });
+    const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+    if (forgotPasswordLink) {
+        forgotPasswordLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            const forgotPasswordModal = document.getElementById('forgotPasswordModal');
+            if (forgotPasswordModal) forgotPasswordModal.classList.add('active');
+        });
+    }
 
     // Logout
-    document.getElementById('logoutBtn').addEventListener('click', function() {
-        supabase.auth.signOut();
-    });
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function() {
+            supabase.auth.signOut();
+        });
+    }
 
     // Modal close buttons
     document.querySelectorAll('.js-modal-close').forEach(button => {
@@ -976,21 +933,40 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Total inventory search
-    document.getElementById('total-inventory-search').addEventListener('input', function() {
-        filterTotalInventory(this.value);
-    });
+    const totalInventorySearch = document.getElementById('total-inventory-search');
+    if (totalInventorySearch) {
+        totalInventorySearch.addEventListener('input', function() {
+            filterTotalInventory(this.value);
+        });
+    }
 
     // Modal confirm buttons
-    document.querySelector('.js-add-item-confirm-btn').addEventListener('click', addNewItem);
-    document.querySelector('.js-add-inventory-confirm-btn').addEventListener('click', addNewInventory);
-    document.querySelector('.js-add-supplier-confirm-btn').addEventListener('click', addNewSupplier);
-    document.querySelector('.js-add-purchase-order-confirm-btn').addEventListener('click', addNewPurchaseOrder);
-    document.querySelector('.js-update-inventory-btn').addEventListener('click', updateInventoryItem);
-    document.querySelector('.js-update-supplier-btn').addEventListener('click', updateSupplier);
-    document.querySelector('.js-update-purchase-order-btn').addEventListener('click', updatePurchaseOrder);
-    document.querySelector('.js-complete-checkout-btn').addEventListener('click', completeCheckout);
-    document.querySelector('.js-complete-purchase-btn').addEventListener('click', completePurchase);
-    document.querySelector('.js-reset-password-btn').addEventListener('click', resetPassword);
+    const addItemConfirmBtn = document.querySelector('.js-add-item-confirm-btn');
+    if (addItemConfirmBtn) addItemConfirmBtn.addEventListener('click', addNewItem);
+    
+    const addInventoryConfirmBtn = document.querySelector('.js-add-inventory-confirm-btn');
+    if (addInventoryConfirmBtn) addInventoryConfirmBtn.addEventListener('click', addNewInventory);
+    
+    const addSupplierConfirmBtn = document.querySelector('.js-add-supplier-confirm-btn');
+    if (addSupplierConfirmBtn) addSupplierConfirmBtn.addEventListener('click', addNewSupplier);
+    
+    const addPurchaseOrderConfirmBtn = document.querySelector('.js-add-purchase-order-confirm-btn');
+    if (addPurchaseOrderConfirmBtn) addPurchaseOrderConfirmBtn.addEventListener('click', addNewPurchaseOrder);
+    
+    const updateInventoryBtn = document.querySelector('.js-update-inventory-btn');
+    if (updateInventoryBtn) updateInventoryBtn.addEventListener('click', updateInventoryItem);
+    
+    const updateSupplierBtn = document.querySelector('.js-update-supplier-btn');
+    if (updateSupplierBtn) updateSupplierBtn.addEventListener('click', updateSupplier);
+    
+    const updatePurchaseOrderBtn = document.querySelector('.js-update-purchase-order-btn');
+    if (updatePurchaseOrderBtn) updatePurchaseOrderBtn.addEventListener('click', updatePurchaseOrder);
+    
+    const completeCheckoutBtn = document.querySelector('.js-complete-checkout-btn');
+    if (completeCheckoutBtn) completeCheckoutBtn.addEventListener('click', completeCheckout);
+    
+    const resetPasswordBtn = document.querySelector('.js-reset-password-btn');
+    if (resetPasswordBtn) resetPasswordBtn.addEventListener('click', resetPassword);
 
     // Event Delegation for dynamic content
     setupEventDelegation();
@@ -998,30 +974,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function setupEventDelegation() {
     // Main nav tabs
-    document.querySelector('.nav-tabs').addEventListener('click', (e) => {
-        const tab = e.target.closest('.nav-tab');
-        if (tab) {
-            const section = tab.getAttribute('data-section');
-            
-            // Handle total inventory tab
-            if (section === 'total-inventory') {
+    const navTabs = document.querySelector('.nav-tabs');
+    if (navTabs) {
+        navTabs.addEventListener('click', (e) => {
+            const tab = e.target.closest('.nav-tab');
+            if (tab) {
+                const section = tab.getAttribute('data-section');
+                
+                // Handle total inventory tab
+                if (section === 'total-inventory') {
+                    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.querySelectorAll('.section-container').forEach(s => s.classList.remove('active'));
+                    const totalInventorySection = document.getElementById('total-inventory-section');
+                    if (totalInventorySection) totalInventorySection.classList.add('active');
+                    currentSection = 'total-inventory';
+                    updateTotalInventory();
+                    return;
+                }
+                
                 document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
                 document.querySelectorAll('.section-container').forEach(s => s.classList.remove('active'));
-                document.getElementById('total-inventory-section').classList.add('active');
-                currentSection = 'total-inventory';
-                updateTotalInventory();
-                return;
+                const sectionElement = document.getElementById(`${section}-section`);
+                if (sectionElement) sectionElement.classList.add('active');
+                currentSection = section;
+                resetToPOSView(section);
             }
-            
-            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            document.querySelectorAll('.section-container').forEach(s => s.classList.remove('active'));
-            document.getElementById(`${section}-section`).classList.add('active');
-            currentSection = section;
-            resetToPOSView(section);
-        }
-    });
+        });
+    }
 
     // Sub nav tabs
     document.querySelectorAll('.sub-nav').forEach(nav => {
@@ -1030,10 +1011,14 @@ function setupEventDelegation() {
             if (item) {
                 const view = item.getAttribute('data-view');
                 const section = nav.closest('.section-container').id.replace('-section', '');
+                
                 document.querySelectorAll(`#${section}-section .sub-nav-item`).forEach(i => i.classList.remove('active'));
                 item.classList.add('active');
                 document.querySelectorAll(`#${section}-section .view-content`).forEach(v => v.classList.remove('active'));
-                document.getElementById(`${section}-${view}-view`).classList.add('active');
+                
+                const viewElement = document.getElementById(`${section}-${view}-view`);
+                if (viewElement) viewElement.classList.add('active');
+                
                 currentView = view;
                 if (view === 'inventory') {
                     loadInventoryTable(section);
@@ -1064,8 +1049,10 @@ function setupEventDelegation() {
                 if (item) {
                     addToCart(section, item);
                     const searchInput = document.querySelector(`.js-pos-search[data-section="${section}"]`);
-                    searchInput.value = '';
-                    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon"><i class="fas fa-search"></i></div><h3 class="empty-state-title">Search for Products</h3><p class="empty-state-description">Type in the search box above to find products from your inventory.</p></div>`;
+                    if (searchInput) {
+                        searchInput.value = '';
+                        container.innerHTML = `<div class="empty-state"><div class="empty-state-icon"><i class="fas fa-search"></i></div><h3 class="empty-state-title">Search for Products</h3><p class="empty-state-description">Type in the search box above to find products from your inventory.</p></div>`;
+                    }
                 }
             }
         });
@@ -1144,19 +1131,22 @@ function setupEventDelegation() {
     });
 
     // Total Inventory Table Actions (Edit, Delete)
-    document.querySelector('.js-total-inventory-container').addEventListener('click', (e) => {
-        if (e.target.closest('.action-btn')) {
-            const btn = e.target.closest('.action-btn');
-            const row = btn.closest('tr');
-            const itemId = row.getAttribute('data-item-id');
-            const section = row.getAttribute('data-section');
-            if (btn.classList.contains('delete')) {
-                deleteInventoryItem(section, itemId);
-            } else {
-                editInventoryItem(section, itemId);
+    const totalInventoryContainer = document.querySelector('.js-total-inventory-container');
+    if (totalInventoryContainer) {
+        totalInventoryContainer.addEventListener('click', (e) => {
+            if (e.target.closest('.action-btn')) {
+                const btn = e.target.closest('.action-btn');
+                const row = btn.closest('tr');
+                const itemId = row.getAttribute('data-item-id');
+                const section = row.getAttribute('data-section');
+                if (btn.classList.contains('delete')) {
+                    deleteInventoryItem(section, itemId);
+                } else {
+                    editInventoryItem(section, itemId);
+                }
             }
-        }
-    });
+        });
+    }
 }
 
 // --- FUNCTIONS (REFACTORED) ---
@@ -1173,6 +1163,7 @@ function initializeApp() {
         loadPurchaseOrdersTable(section);
         updateUserStats(section);
         updateCategoryInventorySummary(section);
+        
         const form = document.getElementById(`${section}-account-form`);
         if (form) {
             form.addEventListener('submit', function(e) {
@@ -1180,6 +1171,7 @@ function initializeApp() {
                 saveAccountInfo(section);
             });
         }
+        
         const searchInput = document.querySelector(`.js-inventory-search[data-section="${section}"]`);
         if (searchInput) {
             searchInput.addEventListener('input', function() {
@@ -1252,6 +1244,8 @@ function initializePOSSearch(section) {
 
 function updateCart(section) {
     const cartItemsContainer = document.querySelector(`.js-cart-items[data-section="${section}"]`);
+    if (!cartItemsContainer) return;
+    
     cartItemsContainer.innerHTML = '';
     let subtotal = 0;
     if (carts[section].length === 0) {
@@ -1264,7 +1258,8 @@ function updateCart(section) {
                 <p class="empty-state-description">Search for products to add to your cart.</p>
             </div>
         `;
-        document.querySelector(`.js-checkout-btn[data-section="${section}"]`).disabled = true;
+        const checkoutBtn = document.querySelector(`.js-checkout-btn[data-section="${section}"]`);
+        if (checkoutBtn) checkoutBtn.disabled = true;
     } else {
         carts[section].forEach(item => {
             const cartItem = document.createElement('div');
@@ -1286,15 +1281,22 @@ function updateCart(section) {
             `;
             cartItemsContainer.appendChild(cartItem);
         });
-        document.querySelector(`.js-checkout-btn[data-section="${section}"]`).disabled = false;
+        const checkoutBtn = document.querySelector(`.js-checkout-btn[data-section="${section}"]`);
+        if (checkoutBtn) checkoutBtn.disabled = false;
     }
-    document.querySelector(`.js-subtotal[data-section="${section}"]`).textContent = `₦${subtotal.toFixed(2)}`;
-    document.querySelector(`.js-total[data-section="${section}"]`).textContent = `₦${subtotal.toFixed(2)}`;
+    
+    const subtotalEl = document.querySelector(`.js-subtotal[data-section="${section}"]`);
+    if (subtotalEl) subtotalEl.textContent = `₦${subtotal.toFixed(2)}`;
+    
+    const totalEl = document.querySelector(`.js-total[data-section="${section}"]`);
+    if (totalEl) totalEl.textContent = `₦${subtotal.toFixed(2)}`;
 }
 
 // CORRECTED: Complete loadInventoryTable function
 function loadInventoryTable(section) {
     const inventoryContainer = document.querySelector(`.js-inventory-container[data-section="${section}"]`);
+    if (!inventoryContainer) return;
+    
     inventoryContainer.innerHTML = '';
     
     const searchInput = document.querySelector(`.js-inventory-search[data-section="${section}"]`);
@@ -1402,6 +1404,8 @@ function loadInventoryTable(section) {
 // Load suppliers table
 function loadSuppliersTable(section) {
     const suppliersContainer = document.querySelector(`.js-suppliers-container[data-section="${section}"]`);
+    if (!suppliersContainer) return;
+    
     suppliersContainer.innerHTML = '';
     
     if (suppliers[section].length === 0) {
@@ -1462,6 +1466,8 @@ function loadSuppliersTable(section) {
 // Load purchase orders table
 function loadPurchaseOrdersTable(section) {
     const purchaseOrdersContainer = document.querySelector(`.js-purchase-orders-container[data-section="${section}"]`);
+    if (!purchaseOrdersContainer) return;
+    
     purchaseOrdersContainer.innerHTML = '';
     
     if (purchaseOrders[section].length === 0) {
@@ -1561,13 +1567,26 @@ function updateTotalInventory() {
     const totalProfit = totalValue - totalCost;
     const profitMargin = totalValue > 0 ? (totalProfit / totalValue) * 100 : 0;
     
-    document.getElementById('total-products').textContent = totalProducts;
-    document.getElementById('total-value').textContent = `₦${totalValue.toFixed(2)}`;
-    document.getElementById('total-cost').textContent = `₦${totalCost.toFixed(2)}`;
-    document.getElementById('total-profit').textContent = `₦${totalProfit.toFixed(2)}`;
-    document.getElementById('total-profit-margin').textContent = `${profitMargin.toFixed(1)}%`;
-    document.getElementById('total-expired').textContent = totalExpired;
-    document.getElementById('total-expiring-soon').textContent = totalExpiringSoon;
+    const totalProductsEl = document.getElementById('total-products');
+    if (totalProductsEl) totalProductsEl.textContent = totalProducts;
+    
+    const totalValueEl = document.getElementById('total-value');
+    if (totalValueEl) totalValueEl.textContent = `₦${totalValue.toFixed(2)}`;
+    
+    const totalCostEl = document.getElementById('total-cost');
+    if (totalCostEl) totalCostEl.textContent = `₦${totalCost.toFixed(2)}`;
+    
+    const totalProfitEl = document.getElementById('total-profit');
+    if (totalProfitEl) totalProfitEl.textContent = `₦${totalProfit.toFixed(2)}`;
+    
+    const profitMarginEl = document.getElementById('total-profit-margin');
+    if (profitMarginEl) profitMarginEl.textContent = `${profitMargin.toFixed(1)}%`;
+    
+    const totalExpiredEl = document.getElementById('total-expired');
+    if (totalExpiredEl) totalExpiredEl.textContent = totalExpired;
+    
+    const totalExpiringSoonEl = document.getElementById('total-expiring-soon');
+    if (totalExpiringSoonEl) totalExpiringSoonEl.textContent = totalExpiringSoon;
     
     loadTotalInventoryTable();
 }
@@ -1575,6 +1594,8 @@ function updateTotalInventory() {
 // Load total inventory table
 function loadTotalInventoryTable() {
     const inventoryContainer = document.querySelector('.js-total-inventory-container');
+    if (!inventoryContainer) return;
+    
     inventoryContainer.innerHTML = '';
     
     const searchInput = document.getElementById('total-inventory-search');
@@ -1709,24 +1730,28 @@ function resetPassword() {
     })
     .then(({ data, error }) => {
         if (error) {
-            errorElement.textContent = error.message;
-            successElement.textContent = '';
+            if (errorElement) errorElement.textContent = error.message;
+            if (successElement) successElement.textContent = '';
         } else {
-            successElement.textContent = 'Password reset email sent. Check your inbox.';
-            errorElement.textContent = '';
+            if (successElement) successElement.textContent = 'Password reset email sent. Check your inbox.';
+            if (errorElement) errorElement.textContent = '';
         }
     });
 }
 
 function showAddItemModal(section) {
     const modal = document.getElementById('addItemModal');
-    document.getElementById('addItemForm').reset();
-    modal.setAttribute('data-section', section);
-    modal.classList.add('active');
+    if (modal) {
+        document.getElementById('addItemForm').reset();
+        modal.setAttribute('data-section', section);
+        modal.classList.add('active');
+    }
 }
 
 function addNewItem() {
     const modal = document.getElementById('addItemModal');
+    if (!modal) return;
+    
     const section = modal.getAttribute('data-section');
     const name = document.getElementById('addItemName').value;
     const price = parseFloat(document.getElementById('addItemPrice').value);
@@ -1756,13 +1781,17 @@ function addNewItem() {
 
 function showAddInventoryModal(section) {
     const modal = document.getElementById('addInventoryModal');
-    document.getElementById('addInventoryForm').reset();
-    modal.setAttribute('data-section', section);
-    modal.classList.add('active');
+    if (modal) {
+        document.getElementById('addInventoryForm').reset();
+        modal.setAttribute('data-section', section);
+        modal.classList.add('active');
+    }
 }
 
 function addNewInventory() {
     const modal = document.getElementById('addInventoryModal');
+    if (!modal) return;
+    
     const section = modal.getAttribute('data-section');
     const name = document.getElementById('addInventoryName').value;
     const price = parseFloat(document.getElementById('addInventoryPrice').value);
@@ -1794,13 +1823,17 @@ function addNewInventory() {
 
 function showAddSupplierModal(section) {
     const modal = document.getElementById('addSupplierModal');
-    document.getElementById('addSupplierForm').reset();
-    modal.setAttribute('data-section', section);
-    modal.classList.add('active');
+    if (modal) {
+        document.getElementById('addSupplierForm').reset();
+        modal.setAttribute('data-section', section);
+        modal.classList.add('active');
+    }
 }
 
 function addNewSupplier() {
     const modal = document.getElementById('addSupplierModal');
+    if (!modal) return;
+    
     const section = modal.getAttribute('data-section');
     const name = document.getElementById('addSupplierName').value;
     const phone = document.getElementById('addSupplierPhone').value;
@@ -1829,29 +1862,35 @@ function addNewSupplier() {
 
 function showAddPurchaseOrderModal(section) {
     const modal = document.getElementById('addPurchaseOrderModal');
+    if (!modal) return;
+    
     document.getElementById('addPurchaseOrderForm').reset();
     
     // Populate supplier dropdown
     const supplierSelect = document.getElementById('addPurchaseOrderSupplier');
-    supplierSelect.innerHTML = '<option value="">Select Supplier</option>';
-    
-    suppliers[section].forEach(supplier => {
-        const option = document.createElement('option');
-        option.value = supplier.id;
-        option.textContent = supplier.name;
-        supplierSelect.appendChild(option);
-    });
+    if (supplierSelect) {
+        supplierSelect.innerHTML = '<option value="">Select Supplier</option>';
+        
+        suppliers[section].forEach(supplier => {
+            const option = document.createElement('option');
+            option.value = supplier.id;
+            option.textContent = supplier.name;
+            supplierSelect.appendChild(option);
+        });
+    }
     
     // Populate product dropdown
     const productSelect = document.getElementById('addPurchaseOrderProduct');
-    productSelect.innerHTML = '<option value="">Select Product</option>';
-    
-    inventory[section].forEach(item => {
-        const option = document.createElement('option');
-        option.value = item.id;
-        option.textContent = `${item.name} (Current Stock: ${item.stock})`;
-        productSelect.appendChild(option);
-    });
+    if (productSelect) {
+        productSelect.innerHTML = '<option value="">Select Product</option>';
+        
+        inventory[section].forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.id;
+            option.textContent = `${item.name} (Current Stock: ${item.stock})`;
+            productSelect.appendChild(option);
+        });
+    }
     
     modal.setAttribute('data-section', section);
     modal.classList.add('active');
@@ -1859,6 +1898,8 @@ function showAddPurchaseOrderModal(section) {
 
 function addNewPurchaseOrder() {
     const modal = document.getElementById('addPurchaseOrderModal');
+    if (!modal) return;
+    
     const section = modal.getAttribute('data-section');
     const supplierId = document.getElementById('addPurchaseOrderSupplier').value;
     const productId = document.getElementById('addPurchaseOrderProduct').value;
@@ -1904,14 +1945,17 @@ function addNewPurchaseOrder() {
 
 function editInventoryItem(section, itemId) {
     const item = inventory[section].find(invItem => invItem.id === itemId);
-    if (item) {
-        document.getElementById('editInventoryName').value = item.name;
-        document.getElementById('editInventoryPrice').value = item.price;
-        document.getElementById('editInventoryCost').value = item.cost || 0;
-        document.getElementById('editInventoryStock').value = item.stock;
-        document.getElementById('editInventoryExpiry').value = item.expiry_date || '';
-        document.getElementById('editInventoryDescription').value = item.description || '';
-        const editModal = document.getElementById('editInventoryModal');
+    if (!item) return;
+    
+    document.getElementById('editInventoryName').value = item.name;
+    document.getElementById('editInventoryPrice').value = item.price;
+    document.getElementById('editInventoryCost').value = item.cost || 0;
+    document.getElementById('editInventoryStock').value = item.stock;
+    document.getElementById('editInventoryExpiry').value = item.expiry_date || '';
+    document.getElementById('editInventoryDescription').value = item.description || '';
+    
+    const editModal = document.getElementById('editInventoryModal');
+    if (editModal) {
         editModal.setAttribute('data-section', section);
         editModal.setAttribute('data-item-id', itemId);
         editModal.classList.add('active');
@@ -1920,6 +1964,8 @@ function editInventoryItem(section, itemId) {
 
 function updateInventoryItem() {
     const editModal = document.getElementById('editInventoryModal');
+    if (!editModal) return;
+    
     const section = editModal.getAttribute('data-section');
     const itemId = editModal.getAttribute('data-item-id');
     const name = document.getElementById('editInventoryName').value;
@@ -1929,39 +1975,43 @@ function updateInventoryItem() {
     const expiryDate = document.getElementById('editInventoryExpiry').value;
     const description = document.getElementById('editInventoryDescription').value;
     const item = inventory[section].find(invItem => invItem.id === itemId);
-    if (item) {
-        const updatedItem = {
-            ...item,
-            name, 
-            price, 
-            cost,
-            stock, 
-            expiry_date: expiryDate,
-            description,
-            status: stock > 10 ? 'in-stock' : (stock > 0 ? 'low-stock' : 'out-of-stock'),
-            updated_by: currentUser ? currentUser.id : 'offline_user',
-            updated_at: new Date().toISOString()
-        };
-        
-        saveDataToSupabase('inventory', updatedItem, itemId).then(() => {
-            editModal.classList.remove('active');
-            showNotification(`${name} updated successfully${navigator.onLine ? '' : ' (will sync when online)'}`, 'success');
-        }).catch(error => {
-            console.error('Error updating item:', error);
-            showNotification('Error updating item', 'error');
-        });
-    }
+    
+    if (!item) return;
+    
+    const updatedItem = {
+        ...item,
+        name, 
+        price, 
+        cost,
+        stock, 
+        expiry_date: expiryDate,
+        description,
+        status: stock > 10 ? 'in-stock' : (stock > 0 ? 'low-stock' : 'out-of-stock'),
+        updated_by: currentUser ? currentUser.id : 'offline_user',
+        updated_at: new Date().toISOString()
+    };
+    
+    saveDataToSupabase('inventory', updatedItem, itemId).then(() => {
+        editModal.classList.remove('active');
+        showNotification(`${name} updated successfully${navigator.onLine ? '' : ' (will sync when online)'}`, 'success');
+    }).catch(error => {
+        console.error('Error updating item:', error);
+        showNotification('Error updating item', 'error');
+    });
 }
 
 function editSupplier(section, supplierId) {
     const supplier = suppliers[section].find(s => s.id === supplierId);
-    if (supplier) {
-        document.getElementById('editSupplierName').value = supplier.name;
-        document.getElementById('editSupplierPhone').value = supplier.phone || '';
-        document.getElementById('editSupplierEmail').value = supplier.email || '';
-        document.getElementById('editSupplierAddress').value = supplier.address || '';
-        document.getElementById('editSupplierProducts').value = supplier.products || '';
-        const editModal = document.getElementById('editSupplierModal');
+    if (!supplier) return;
+    
+    document.getElementById('editSupplierName').value = supplier.name;
+    document.getElementById('editSupplierPhone').value = supplier.phone || '';
+    document.getElementById('editSupplierEmail').value = supplier.email || '';
+    document.getElementById('editSupplierAddress').value = supplier.address || '';
+    document.getElementById('editSupplierProducts').value = supplier.products || '';
+    
+    const editModal = document.getElementById('editSupplierModal');
+    if (editModal) {
         editModal.setAttribute('data-section', section);
         editModal.setAttribute('data-item-id', supplierId);
         editModal.classList.add('active');
@@ -1970,6 +2020,8 @@ function editSupplier(section, supplierId) {
 
 function updateSupplier() {
     const editModal = document.getElementById('editSupplierModal');
+    if (!editModal) return;
+    
     const section = editModal.getAttribute('data-section');
     const supplierId = editModal.getAttribute('data-item-id');
     const name = document.getElementById('editSupplierName').value;
@@ -1978,35 +2030,39 @@ function updateSupplier() {
     const address = document.getElementById('editSupplierAddress').value;
     const products = document.getElementById('editSupplierProducts').value;
     const supplier = suppliers[section].find(s => s.id === supplierId);
-    if (supplier) {
-        const updatedSupplier = {
-            ...supplier,
-            name, 
-            phone,
-            email,
-            address,
-            products,
-            updated_by: currentUser ? currentUser.id : 'offline_user',
-            updated_at: new Date().toISOString()
-        };
-        
-        saveDataToSupabase('suppliers', updatedSupplier, supplierId).then(() => {
-            editModal.classList.remove('active');
-            showNotification(`${name} updated successfully${navigator.onLine ? '' : ' (will sync when online)'}`, 'success');
-        }).catch(error => {
-            console.error('Error updating supplier:', error);
-            showNotification('Error updating supplier', 'error');
-        });
-    }
+    
+    if (!supplier) return;
+    
+    const updatedSupplier = {
+        ...supplier,
+        name, 
+        phone,
+        email,
+        address,
+        products,
+        updated_by: currentUser ? currentUser.id : 'offline_user',
+        updated_at: new Date().toISOString()
+    };
+    
+    saveDataToSupabase('suppliers', updatedSupplier, supplierId).then(() => {
+        editModal.classList.remove('active');
+        showNotification(`${name} updated successfully${navigator.onLine ? '' : ' (will sync when online)'}`, 'success');
+    }).catch(error => {
+        console.error('Error updating supplier:', error);
+        showNotification('Error updating supplier', 'error');
+    });
 }
 
 function editPurchaseOrder(section, orderId) {
     const order = purchaseOrders[section].find(o => o.id === orderId);
-    if (order) {
-        document.getElementById('editPurchaseOrderQuantity').value = order.quantity;
-        document.getElementById('editPurchaseOrderCost').value = order.cost;
-        document.getElementById('editPurchaseOrderStatus').value = order.status;
-        const editModal = document.getElementById('editPurchaseOrderModal');
+    if (!order) return;
+    
+    document.getElementById('editPurchaseOrderQuantity').value = order.quantity;
+    document.getElementById('editPurchaseOrderCost').value = order.cost;
+    document.getElementById('editPurchaseOrderStatus').value = order.status;
+    
+    const editModal = document.getElementById('editPurchaseOrderModal');
+    if (editModal) {
         editModal.setAttribute('data-section', section);
         editModal.setAttribute('data-item-id', orderId);
         editModal.classList.add('active');
@@ -2015,126 +2071,129 @@ function editPurchaseOrder(section, orderId) {
 
 function updatePurchaseOrder() {
     const editModal = document.getElementById('editPurchaseOrderModal');
+    if (!editModal) return;
+    
     const section = editModal.getAttribute('data-section');
     const orderId = editModal.getAttribute('data-item-id');
     const quantity = parseInt(document.getElementById('editPurchaseOrderQuantity').value);
     const cost = parseFloat(document.getElementById('editPurchaseOrderCost').value);
     const status = document.getElementById('editPurchaseOrderStatus').value;
     const order = purchaseOrders[section].find(o => o.id === orderId);
-    if (order) {
-        const total = cost * quantity;
-        const updatedOrder = {
-            ...order,
-            quantity,
-            cost,
-            total,
-            status,
-            updated_by: currentUser ? currentUser.id : 'offline_user',
-            updated_at: new Date().toISOString()
-        };
-        
-        saveDataToSupabase('purchase_orders', updatedOrder, orderId).then(() => {
-            editModal.classList.remove('active');
-            showNotification(`Purchase order updated successfully${navigator.onLine ? '' : ' (will sync when online)'}`, 'success');
-        }).catch(error => {
-            console.error('Error updating purchase order:', error);
-            showNotification('Error updating purchase order', 'error');
-        });
-    }
+    
+    if (!order) return;
+    
+    const total = cost * quantity;
+    const updatedOrder = {
+        ...order,
+        quantity,
+        cost,
+        total,
+        status,
+        updated_by: currentUser ? currentUser.id : 'offline_user',
+        updated_at: new Date().toISOString()
+    };
+    
+    saveDataToSupabase('purchase_orders', updatedOrder, orderId).then(() => {
+        editModal.classList.remove('active');
+        showNotification(`Purchase order updated successfully${navigator.onLine ? '' : ' (will sync when online)'}`, 'success');
+    }).catch(error => {
+        console.error('Error updating purchase order:', error);
+        showNotification('Error updating purchase order', 'error');
+    });
 }
 
 function receivePurchaseOrder(section, orderId) {
     const order = purchaseOrders[section].find(o => o.id === orderId);
-    if (order) {
-        const product = inventory[section].find(p => p.id === order.productId);
-        if (product) {
-            // Update product stock and cost
-            product.stock += order.quantity;
-            product.cost = order.cost;
-            product.status = getProductStatus(product);
-            
-            // Update order status
-            order.status = 'received';
-            order.receivedDate = new Date().toISOString().split('T')[0];
-            
-            // Save both changes
-            Promise.all([
-                saveDataToSupabase('inventory', product, product.id),
-                saveDataToSupabase('purchase_orders', order, orderId)
-            ]).then(() => {
-                showNotification(`Purchase order received successfully. Stock updated for ${product.name}`, 'success');
-            }).catch(error => {
-                console.error('Error receiving purchase order:', error);
-                showNotification('Error receiving purchase order', 'error');
-            });
-        }
-    }
+    if (!order) return;
+    
+    const product = inventory[section].find(p => p.id === order.productId);
+    if (!product) return;
+    
+    // Update product stock and cost
+    product.stock += order.quantity;
+    product.cost = order.cost;
+    product.status = getProductStatus(product);
+    
+    // Update order status
+    order.status = 'received';
+    order.receivedDate = new Date().toISOString().split('T')[0];
+    
+    // Save both changes
+    Promise.all([
+        saveDataToSupabase('inventory', product, product.id),
+        saveDataToSupabase('purchase_orders', order, orderId)
+    ]).then(() => {
+        showNotification(`Purchase order received successfully. Stock updated for ${product.name}`, 'success');
+    }).catch(error => {
+        console.error('Error receiving purchase order:', error);
+        showNotification('Error receiving purchase order', 'error');
+    });
 }
 
 function deleteInventoryItem(section, itemId) {
-    if (confirm('Are you sure you want to delete this item?')) {
-        const item = inventory[section].find(invItem => invItem.id === itemId);
-        if (item) {
-            // Mark as deleted locally
-            item.deleted = true;
-            item.deleted_at = new Date().toISOString();
-            
-            saveDataToSupabase('inventory', item, itemId).then(() => {
-                inventory[section] = inventory[section].filter(invItem => invItem.id !== itemId);
-                saveToLocalStorage(`inventory_${section}`, inventory[section]);
-                loadInventoryTable(section);
-                updateDepartmentStats(section);
-                updateCategoryInventorySummary(section);
-                updateTotalInventory();
-                showNotification('Item deleted successfully', 'success');
-            }).catch(error => {
-                console.error('Error deleting item:', error);
-                showNotification('Error deleting item', 'error');
-            });
-        }
-    }
+    if (!confirm('Are you sure you want to delete this item?')) return;
+    
+    const item = inventory[section].find(invItem => invItem.id === itemId);
+    if (!item) return;
+    
+    // Mark as deleted locally
+    item.deleted = true;
+    item.deleted_at = new Date().toISOString();
+    
+    saveDataToSupabase('inventory', item, itemId).then(() => {
+        inventory[section] = inventory[section].filter(invItem => invItem.id !== itemId);
+        saveToLocalStorage(`inventory_${section}`, inventory[section]);
+        loadInventoryTable(section);
+        updateDepartmentStats(section);
+        updateCategoryInventorySummary(section);
+        updateTotalInventory();
+        showNotification('Item deleted successfully', 'success');
+    }).catch(error => {
+        console.error('Error deleting item:', error);
+        showNotification('Error deleting item', 'error');
+    });
 }
 
 function deleteSupplier(section, supplierId) {
-    if (confirm('Are you sure you want to delete this supplier?')) {
-        const supplier = suppliers[section].find(s => s.id === supplierId);
-        if (supplier) {
-            // Mark as deleted locally
-            supplier.deleted = true;
-            supplier.deleted_at = new Date().toISOString();
-            
-            saveDataToSupabase('suppliers', supplier, supplierId).then(() => {
-                suppliers[section] = suppliers[section].filter(s => s.id !== supplierId);
-                saveToLocalStorage(`suppliers_${section}`, suppliers[section]);
-                loadSuppliersTable(section);
-                showNotification('Supplier deleted successfully', 'success');
-            }).catch(error => {
-                console.error('Error deleting supplier:', error);
-                showNotification('Error deleting supplier', 'error');
-            });
-        }
-    }
+    if (!confirm('Are you sure you want to delete this supplier?')) return;
+    
+    const supplier = suppliers[section].find(s => s.id === supplierId);
+    if (!supplier) return;
+    
+    // Mark as deleted locally
+    supplier.deleted = true;
+    supplier.deleted_at = new Date().toISOString();
+    
+    saveDataToSupabase('suppliers', supplier, supplierId).then(() => {
+        suppliers[section] = suppliers[section].filter(s => s.id !== supplierId);
+        saveToLocalStorage(`suppliers_${section}`, suppliers[section]);
+        loadSuppliersTable(section);
+        showNotification('Supplier deleted successfully', 'success');
+    }).catch(error => {
+        console.error('Error deleting supplier:', error);
+        showNotification('Error deleting supplier', 'error');
+    });
 }
 
 function deletePurchaseOrder(section, orderId) {
-    if (confirm('Are you sure you want to delete this purchase order?')) {
-        const order = purchaseOrders[section].find(o => o.id === orderId);
-        if (order) {
-            // Mark as deleted locally
-            order.deleted = true;
-            order.deleted_at = new Date().toISOString();
-            
-            saveDataToSupabase('purchase_orders', order, orderId).then(() => {
-                purchaseOrders[section] = purchaseOrders[section].filter(o => o.id !== orderId);
-                saveToLocalStorage(`purchaseOrders_${section}`, purchaseOrders[section]);
-                loadPurchaseOrdersTable(section);
-                showNotification('Purchase order deleted successfully', 'success');
-            }).catch(error => {
-                console.error('Error deleting purchase order:', error);
-                showNotification('Error deleting purchase order', 'error');
-            });
-        }
-    }
+    if (!confirm('Are you sure you want to delete this purchase order?')) return;
+    
+    const order = purchaseOrders[section].find(o => o.id === orderId);
+    if (!order) return;
+    
+    // Mark as deleted locally
+    order.deleted = true;
+    order.deleted_at = new Date().toISOString();
+    
+    saveDataToSupabase('purchase_orders', order, orderId).then(() => {
+        purchaseOrders[section] = purchaseOrders[section].filter(o => o.id !== orderId);
+        saveToLocalStorage(`purchaseOrders_${section}`, purchaseOrders[section]);
+        loadPurchaseOrdersTable(section);
+        showNotification('Purchase order deleted successfully', 'success');
+    }).catch(error => {
+        console.error('Error deleting purchase order:', error);
+        showNotification('Error deleting purchase order', 'error');
+    });
 }
 
 // FIXED: Enhanced cart functions to save to localStorage
@@ -2205,6 +2264,8 @@ function processCheckout(section) {
         return; 
     }
     const checkoutModal = document.getElementById('checkoutModal');
+    if (!checkoutModal) return;
+    
     const checkoutSummary = document.getElementById('checkout-summary');
     let subtotal = 0; 
     let totalCost = 0;
@@ -2232,6 +2293,8 @@ function processCheckout(section) {
 // FIXED: Enhanced completeCheckout function
 function completeCheckout() {
     const checkoutModal = document.getElementById('checkoutModal');
+    if (!checkoutModal) return;
+    
     const section = checkoutModal.getAttribute('data-section');
     let subtotal = 0; 
     let totalCost = 0;
@@ -2320,18 +2383,6 @@ function completeCheckout() {
     });
 }
 
-function processPurchase(section) {
-    // This function would handle the purchase process
-    // It would be similar to processCheckout but for purchases
-    showNotification('Purchase processing not implemented yet', 'info');
-}
-
-function completePurchase() {
-    // This function would complete the purchase process
-    // It would be similar to completeCheckout but for purchases
-    showNotification('Purchase completion not implemented yet', 'info');
-}
-
 function filterInventory(section, searchTerm) { 
     loadInventoryTable(section); 
 }
@@ -2344,12 +2395,23 @@ function updateReports(section) {
     const profit = salesData[section]?.profit || 0;
     const profitMargin = salesData[section]?.profitMargin || 0;
     
-    document.getElementById(`${section}-total-sales`).textContent = `₦${totalSales.toFixed(2)}`;
-    document.getElementById(`${section}-total-transactions`).textContent = salesData[section]?.totalTransactions || 0;
-    document.getElementById(`${section}-avg-transaction`).textContent = `₦${avgTransaction.toFixed(2)}`;
-    document.getElementById(`${section}-top-item`).textContent = salesData[section]?.topItem || '-';
-    document.getElementById(`${section}-total-profit`).textContent = `₦${profit.toFixed(2)}`;
-    document.getElementById(`${section}-profit-margin`).textContent = `${profitMargin.toFixed(1)}%`;
+    const totalSalesEl = document.getElementById(`${section}-total-sales`);
+    if (totalSalesEl) totalSalesEl.textContent = `₦${totalSales.toFixed(2)}`;
+    
+    const totalTransactionsEl = document.getElementById(`${section}-total-transactions`);
+    if (totalTransactionsEl) totalTransactionsEl.textContent = salesData[section]?.totalTransactions || 0;
+    
+    const avgTransactionEl = document.getElementById(`${section}-avg-transaction`);
+    if (avgTransactionEl) avgTransactionEl.textContent = `₦${avgTransaction.toFixed(2)}`;
+    
+    const topItemEl = document.getElementById(`${section}-top-item`);
+    if (topItemEl) topItemEl.textContent = salesData[section]?.topItem || '-';
+    
+    const totalProfitEl = document.getElementById(`${section}-total-profit`);
+    if (totalProfitEl) totalProfitEl.textContent = `₦${profit.toFixed(2)}`;
+    
+    const profitMarginEl = document.getElementById(`${section}-profit-margin`);
+    if (profitMarginEl) profitMarginEl.textContent = `${profitMargin.toFixed(1)}%`;
 }
 
 // FIXED: Added null checks to prevent toFixed() errors
@@ -2358,10 +2420,17 @@ function updatePurchaseReports(section) {
     const totalPurchases = purchaseData[section]?.totalPurchases || 0;
     const avgTransaction = purchaseData[section]?.avgTransaction || 0;
     
-    document.getElementById(`${section}-total-purchases`).textContent = `₦${totalPurchases.toFixed(2)}`;
-    document.getElementById(`${section}-total-purchase-transactions`).textContent = purchaseData[section]?.totalTransactions || 0;
-    document.getElementById(`${section}-avg-purchase-transaction`).textContent = `₦${avgTransaction.toFixed(2)}`;
-    document.getElementById(`${section}-top-supplier`).textContent = purchaseData[section]?.topSupplier || '-';
+    const totalPurchasesEl = document.getElementById(`${section}-total-purchases`);
+    if (totalPurchasesEl) totalPurchasesEl.textContent = `₦${totalPurchases.toFixed(2)}`;
+    
+    const totalTransactionsEl = document.getElementById(`${section}-total-purchase-transactions`);
+    if (totalTransactionsEl) totalTransactionsEl.textContent = purchaseData[section]?.totalTransactions || 0;
+    
+    const avgTransactionEl = document.getElementById(`${section}-avg-purchase-transaction`);
+    if (avgTransactionEl) avgTransactionEl.textContent = `₦${avgTransaction.toFixed(2)}`;
+    
+    const topSupplierEl = document.getElementById(`${section}-top-supplier`);
+    if (topSupplierEl) topSupplierEl.textContent = purchaseData[section]?.topSupplier || '-';
 }
 
 // FIXED: Added null checks to prevent toFixed() errors
@@ -2385,14 +2454,29 @@ function updateFinancialReports(section) {
     const inventoryProfitMargin = inventoryValue > 0 ? (inventoryProfit / inventoryValue) * 100 : 0;
     
     // Update financial report elements
-    document.getElementById(`${section}-financial-total-sales`).textContent = `₦${totalSales.toFixed(2)}`;
-    document.getElementById(`${section}-financial-total-purchases`).textContent = `₦${totalPurchases.toFixed(2)}`;
-    document.getElementById(`${section}-financial-total-profit`).textContent = `₦${totalProfit.toFixed(2)}`;
-    document.getElementById(`${section}-financial-profit-margin`).textContent = `${profitMargin.toFixed(1)}%`;
-    document.getElementById(`${section}-financial-inventory-value`).textContent = `₦${inventoryValue.toFixed(2)}`;
-    document.getElementById(`${section}-financial-inventory-cost`).textContent = `₦${inventoryCost.toFixed(2)}`;
-    document.getElementById(`${section}-financial-inventory-profit`).textContent = `₦${inventoryProfit.toFixed(2)}`;
-    document.getElementById(`${section}-financial-inventory-profit-margin`).textContent = `${inventoryProfitMargin.toFixed(1)}%`;
+    const financialTotalSalesEl = document.getElementById(`${section}-financial-total-sales`);
+    if (financialTotalSalesEl) financialTotalSalesEl.textContent = `₦${totalSales.toFixed(2)}`;
+    
+    const financialTotalPurchasesEl = document.getElementById(`${section}-financial-total-purchases`);
+    if (financialTotalPurchasesEl) financialTotalPurchasesEl.textContent = `₦${totalPurchases.toFixed(2)}`;
+    
+    const financialTotalProfitEl = document.getElementById(`${section}-financial-total-profit`);
+    if (financialTotalProfitEl) financialTotalProfitEl.textContent = `₦${totalProfit.toFixed(2)}`;
+    
+    const financialProfitMarginEl = document.getElementById(`${section}-financial-profit-margin`);
+    if (financialProfitMarginEl) financialProfitMarginEl.textContent = `${profitMargin.toFixed(1)}%`;
+    
+    const financialInventoryValueEl = document.getElementById(`${section}-financial-inventory-value`);
+    if (financialInventoryValueEl) financialInventoryValueEl.textContent = `₦${inventoryValue.toFixed(2)}`;
+    
+    const financialInventoryCostEl = document.getElementById(`${section}-financial-inventory-cost`);
+    if (financialInventoryCostEl) financialInventoryCostEl.textContent = `₦${inventoryCost.toFixed(2)}`;
+    
+    const financialInventoryProfitEl = document.getElementById(`${section}-financial-inventory-profit`);
+    if (financialInventoryProfitEl) financialInventoryProfitEl.textContent = `₦${inventoryProfit.toFixed(2)}`;
+    
+    const financialInventoryProfitMarginEl = document.getElementById(`${section}-financial-inventory-profit-margin`);
+    if (financialInventoryProfitMarginEl) financialInventoryProfitMarginEl.textContent = `${inventoryProfitMargin.toFixed(1)}%`;
 }
 
 function updateUserStats(section) {
@@ -2400,10 +2484,17 @@ function updateUserStats(section) {
     const sales = userData[section]?.sales || 0;
     const purchases = userData[section]?.purchases || 0;
     
-    document.getElementById(`${section}-user-transactions`).textContent = userData[section]?.transactions || 0;
-    document.getElementById(`${section}-user-sales`).textContent = `₦${sales.toFixed(2)}`;
-    document.getElementById(`${section}-user-purchases`).textContent = `₦${purchases.toFixed(2)}`;
-    document.getElementById(`${section}-user-net`).textContent = `₦${(sales - purchases).toFixed(2)}`;
+    const transactionsEl = document.getElementById(`${section}-user-transactions`);
+    if (transactionsEl) transactionsEl.textContent = userData[section]?.transactions || 0;
+    
+    const salesEl = document.getElementById(`${section}-user-sales`);
+    if (salesEl) salesEl.textContent = `₦${sales.toFixed(2)}`;
+    
+    const purchasesEl = document.getElementById(`${section}-user-purchases`);
+    if (purchasesEl) purchasesEl.textContent = `₦${purchases.toFixed(2)}`;
+    
+    const netEl = document.getElementById(`${section}-user-net`);
+    if (netEl) netEl.textContent = `₦${(sales - purchases).toFixed(2)}`;
 }
 
 // FIXED: Added null checks to prevent toFixed() errors
@@ -2418,12 +2509,23 @@ function updateDepartmentStats(section) {
     const dailyPurchases = purchaseData[section]?.dailyPurchases || 0;
     const dailyProfit = salesData[section]?.profit || 0;
     
-    document.getElementById(`${section}-daily-sales`).textContent = `₦${dailySales.toFixed(2)}`;
-    document.getElementById(`${section}-daily-purchases`).textContent = `₦${dailyPurchases.toFixed(2)}`;
-    document.getElementById(`${section}-daily-profit`).textContent = `₦${dailyProfit.toFixed(2)}`;
-    document.getElementById(`${section}-daily-transactions`).textContent = salesData[section]?.dailyTransactions || 0;
-    document.getElementById(`${section}-daily-purchase-transactions`).textContent = purchaseData[section]?.dailyTransactions || 0;
-    document.getElementById(`${section}-low-stock`).textContent = lowStockItems;
+    const dailySalesEl = document.getElementById(`${section}-daily-sales`);
+    if (dailySalesEl) dailySalesEl.textContent = `₦${dailySales.toFixed(2)}`;
+    
+    const dailyPurchasesEl = document.getElementById(`${section}-daily-purchases`);
+    if (dailyPurchasesEl) dailyPurchasesEl.textContent = `₦${dailyPurchases.toFixed(2)}`;
+    
+    const dailyProfitEl = document.getElementById(`${section}-daily-profit`);
+    if (dailyProfitEl) dailyProfitEl.textContent = `₦${dailyProfit.toFixed(2)}`;
+    
+    const dailyTransactionsEl = document.getElementById(`${section}-daily-transactions`);
+    if (dailyTransactionsEl) dailyTransactionsEl.textContent = salesData[section]?.dailyTransactions || 0;
+    
+    const dailyPurchaseTransactionsEl = document.getElementById(`${section}-daily-purchase-transactions`);
+    if (dailyPurchaseTransactionsEl) dailyPurchaseTransactionsEl.textContent = purchaseData[section]?.dailyTransactions || 0;
+    
+    const lowStockEl = document.getElementById(`${section}-low-stock`);
+    if (lowStockEl) lowStockEl.textContent = lowStockItems;
 }
 
 function resetToPOSView(section) {
@@ -2431,17 +2533,22 @@ function resetToPOSView(section) {
         item.classList.remove('active');
         if (item.getAttribute('data-view') === 'pos') item.classList.add('active');
     });
-    document.querySelectorAll(`#${section}-section .view-content`).forEach(view => view.classList.remove('active'));
-    document.getElementById(`${section}-pos-view`).classList.add('active');
+    document.querySelectorAll(`#${section}-section .view-content`).forEach(view => {
+        view.classList.remove('active');
+        if (view.id === `${section}-pos-view`) view.classList.add('active');
+    });
     currentView = 'pos';
 }
 
 function closeModal(modalId) { 
-    document.getElementById(modalId).classList.remove('active'); 
+    const modal = document.getElementById(modalId);
+    if (modal) modal.classList.remove('active');
 }
 
 function showNotification(message, type = 'info') {
     const notification = document.getElementById('notification');
+    if (!notification) return;
+    
     notification.textContent = message; 
     notification.className = `notification ${type}`;
     notification.classList.add('show');
