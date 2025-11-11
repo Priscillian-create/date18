@@ -407,8 +407,12 @@ async function saveDataToSupabase(table, data, id = null) {
                     updated_by, updated_at, deleted, deleted_at
                 } = dataForSupabase;
                 
+                // FIX: Convert empty expiry_date string to null for database
+                const cleanExpiryDate = expiry_date && expiry_date.trim() !== '' ? expiry_date : null;
+                
                 dataForSupabase = {
-                    section, name, price, cost, stock, expiry_date,
+                    section, name, price, cost, stock, 
+                    expiry_date: cleanExpiryDate, // Use the cleaned value
                     description, status, created_by, created_at,
                     updated_by, updated_at, deleted, deleted_at
                 };
@@ -641,8 +645,10 @@ async function syncPendingChanges() {
                             updated_by, updated_at, deleted, deleted_at
                         } = dataForSupabase;
                         
+                        const cleanExpiryDate = expiry_date && expiry_date.trim() !== '' ? expiry_date : null;
                         dataForSupabase = {
-                            section, name, price, cost, stock, expiry_date,
+                            section, name, price, cost, stock, 
+                            expiry_date: cleanExpiryDate,
                             description, status, created_by, created_at,
                             updated_by, updated_at, deleted, deleted_at
                         };
@@ -746,8 +752,10 @@ async function syncPendingChanges() {
                             updated_by, updated_at, deleted, deleted_at
                         } = dataForSupabase;
                         
+                        const cleanExpiryDate = expiry_date && expiry_date.trim() !== '' ? expiry_date : null;
                         dataForSupabase = {
-                            section, name, price, cost, stock, expiry_date,
+                            section, name, price, cost, stock, 
+                            expiry_date: cleanExpiryDate,
                             description, status, created_by, created_at,
                             updated_by, updated_at, deleted, deleted_at
                         };
@@ -1249,6 +1257,30 @@ document.addEventListener('DOMContentLoaded', function() {
     // Event Delegation for dynamic content
     setupEventDelegation();
 });
+
+// NEW: Helper function for form validation
+function validateForm(formId, requiredFields) {
+    const form = document.getElementById(formId);
+    if (!form) return { isValid: false, message: 'Form not found.' };
+
+    const missingFields = [];
+    requiredFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        const value = field ? field.value.trim() : '';
+        if (value === '') {
+            missingFields.push(field.getAttribute('data-label') || fieldId);
+        }
+    });
+
+    if (missingFields.length > 0) {
+        return {
+            isValid: false,
+            message: `Please fill in all required fields: ${missingFields.join(', ')}.`
+        };
+    }
+
+    return { isValid: true };
+}
 
 function setupEventDelegation() {
     // Main nav tabs
@@ -2066,11 +2098,24 @@ function showAddInventoryModal(section) {
     }
 }
 
+// UPDATED: Added form validation
 function addNewInventory() {
     const modal = document.getElementById('addInventoryModal');
     if (!modal) return;
     
     const section = modal.getAttribute('data-section');
+    
+    // NEW: Validate form before proceeding
+    const validation = validateForm('addInventoryForm', [
+        'addInventoryName', 
+        'addInventoryPrice', 
+        'addInventoryStock'
+    ]);
+    if (!validation.isValid) {
+        showNotification(validation.message, 'error');
+        return;
+    }
+    
     const name = document.getElementById('addInventoryName').value;
     const price = parseFloat(document.getElementById('addInventoryPrice').value);
     const cost = parseFloat(document.getElementById('addInventoryCost').value) || 0;
@@ -2108,11 +2153,20 @@ function showAddSupplierModal(section) {
     }
 }
 
+// UPDATED: Added form validation
 function addNewSupplier() {
     const modal = document.getElementById('addSupplierModal');
     if (!modal) return;
     
     const section = modal.getAttribute('data-section');
+
+    // NEW: Validate form before proceeding
+    const validation = validateForm('addSupplierForm', ['addSupplierName']);
+    if (!validation.isValid) {
+        showNotification(validation.message, 'error');
+        return;
+    }
+    
     const name = document.getElementById('addSupplierName').value;
     const phone = document.getElementById('addSupplierPhone').value;
     const email = document.getElementById('addSupplierEmail').value;
@@ -2174,11 +2228,25 @@ function showAddPurchaseOrderModal(section) {
     }
 }
 
+// UPDATED: Added form validation
 function addNewPurchaseOrder() {
     const modal = document.getElementById('addPurchaseOrderModal');
     if (!modal) return;
     
     const section = modal.getAttribute('data-section');
+
+    // NEW: Validate form before proceeding
+    const validation = validateForm('addPurchaseOrderForm', [
+        'addPurchaseOrderSupplier', 
+        'addPurchaseOrderProduct', 
+        'addPurchaseOrderQuantity', 
+        'addPurchaseOrderCost'
+    ]);
+    if (!validation.isValid) {
+        showNotification(validation.message, 'error');
+        return;
+    }
+    
     const supplierId = document.getElementById('addPurchaseOrderSupplier').value;
     const productId = document.getElementById('addPurchaseOrderProduct').value;
     const quantity = parseInt(document.getElementById('addPurchaseOrderQuantity').value);
@@ -2201,7 +2269,7 @@ function addNewPurchaseOrder() {
         orderNumber,
         supplierId,
         supplierName: supplier.name,
-        productId, // This will now be saved correctly
+        productId,
         productName: product.name,
         quantity,
         cost,
@@ -2568,12 +2636,20 @@ function processCheckout(section) {
     checkoutModal.classList.add('active');
 }
 
-// FIXED: Enhanced completeCheckout function
+// UPDATED: Added form validation
 function completeCheckout() {
     const checkoutModal = document.getElementById('checkoutModal');
     if (!checkoutModal) return;
     
     const section = checkoutModal.getAttribute('data-section');
+
+    // NEW: Validate form before proceeding
+    const validation = validateForm('checkoutForm', ['paymentMethod']);
+    if (!validation.isValid) {
+        showNotification(validation.message, 'error');
+        return;
+    }
+    
     let subtotal = 0; 
     let totalCost = 0;
     const saleItems = [];
