@@ -319,6 +319,21 @@ const supabase = window.supabase.createClient(
             dataForSupabase = {
               id, transactions, sales, purchases
             };
+          } else if (table === 'purchase_orders') {
+            // ONLY include columns that exist in your purchase_orders table
+            const {
+              section, orderNumber, supplierId, supplierName,
+              productName, quantity, cost, total, orderDate,
+              status, created_by, created_at, updated_by, updated_at,
+              deleted, deleted_at, receivedDate
+            } = dataForSupabase;
+            
+            dataForSupabase = {
+              section, orderNumber, supplierId, supplierName,
+              productName, quantity, cost, total, orderDate,
+              status, created_by, created_at, updated_by, updated_at,
+              deleted, deleted_at, receivedDate
+            };
           }
           
           let result;
@@ -469,6 +484,21 @@ const supabase = window.supabase.createClient(
                 dataForSupabase = {
                   id, transactions, sales, purchases
                 };
+              } else if (table === 'purchase_orders') {
+                // ONLY include columns that exist in your purchase_orders table
+                const {
+                  section, orderNumber, supplierId, supplierName,
+                  productName, quantity, cost, total, orderDate,
+                  status, created_by, created_at, updated_by, updated_at,
+                  deleted, deleted_at, receivedDate
+                } = dataForSupabase;
+                
+                dataForSupabase = {
+                  section, orderNumber, supplierId, supplierName,
+                  productName, quantity, cost, total, orderDate,
+                  status, created_by, created_at, updated_by, updated_at,
+                  deleted, deleted_at, receivedDate
+                };
               }
               
               promises.push(
@@ -562,6 +592,21 @@ const supabase = window.supabase.createClient(
                 
                 dataForSupabase = {
                   id, transactions, sales, purchases
+                };
+              } else if (table === 'purchase_orders') {
+                // ONLY include columns that exist in your purchase_orders table
+                const {
+                  section, orderNumber, supplierId, supplierName,
+                  productName, quantity, cost, total, orderDate,
+                  status, created_by, created_at, updated_by, updated_at,
+                  deleted, deleted_at, receivedDate
+                } = dataForSupabase;
+                
+                dataForSupabase = {
+                  section, orderNumber, supplierId, supplierName,
+                  productName, quantity, cost, total, orderDate,
+                  status, created_by, created_at, updated_by, updated_at,
+                  deleted, deleted_at, receivedDate
                 };
               }
               
@@ -2128,7 +2173,7 @@ const supabase = window.supabase.createClient(
         orderNumber,
         supplierId,
         supplierName: supplier.name,
-        productId,
+        productId, // This is used locally but won't be sent to Supabase
         productName: product.name,
         quantity,
         cost,
