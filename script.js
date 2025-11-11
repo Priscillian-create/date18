@@ -1038,6 +1038,7 @@ async function loadDataFromSupabase() {
                         // If no data exists, create initial record
                         const initialUserData = {
                             id: section,
+                            userId: section, // Added missing column
                             transactions: 0,
                             sales: 0,
                             purchases: 0
@@ -2200,7 +2201,7 @@ function addNewPurchaseOrder() {
         orderNumber,
         supplierId,
         supplierName: supplier.name,
-        productId,
+        productId, // This will now be saved correctly
         productName: product.name,
         quantity,
         cost,
