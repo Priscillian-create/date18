@@ -166,7 +166,7 @@ function isExpiringSoon(expiryDate) {
     const expiry = new Date(expiryDate);
     const diffTime = expiry - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 && diffDays <= 7;
+    return diffTime > 0 && diffDays <= 7;
 }
 
 // Get product status based on stock and expiry
@@ -247,7 +247,7 @@ function updateCategoryInventorySummary(section) {
 // ===================================================================
 // UPDATED FUNCTION: saveDataToSupabase
 // ===================================================================
-// FIXED: Enhanced saveDataToSupabase function with better persistence
+// FIXED: Enhanced saveDataToSupabase function with better data cleaning
 async function saveDataToSupabase(table, data, id = null) {
     // Add timestamp and user info
     data.timestamp = new Date().toISOString();
@@ -388,13 +388,71 @@ async function saveDataToSupabase(table, data, id = null) {
         try {
             console.log(`Saving to Supabase table: ${table}`);
             
-            // --- FIX IS HERE ---
             // Create a clean copy of the data for Supabase, removing client-only properties
-            const { isOffline, ...dataForSupabase } = data;
+            let dataForSupabase = { ...data };
+            delete dataForSupabase.isOffline;
+            delete dataForSupabase.timestamp;
             
             // For new items, let Supabase generate the ID. Remove our temporary one.
             if (!id || id.startsWith('offline_')) {
                 delete dataForSupabase.id;
+            }
+            
+            // Table-specific data cleaning
+            if (table === 'inventory') {
+                // Only include valid columns for inventory table
+                const {
+                    section, name, price, cost, stock, expiry_date,
+                    description, status, created_by, created_at,
+                    updated_by, updated_at, deleted, deleted_at
+                } = dataForSupabase;
+                
+                dataForSupabase = {
+                    section, name, price, cost, stock, expiry_date,
+                    description, status, created_by, created_at,
+                    updated_by, updated_at, deleted, deleted_at
+                };
+            } else if (table === 'sales') {
+                // Only include valid columns for sales table
+                const {
+                    user_id, user_email, section, items, subtotal, total,
+                    totalCost, totalProfit, profitMargin, payment_method,
+                    customer_name, customer_phone, timestamp
+                } = dataForSupabase;
+                
+                dataForSupabase = {
+                    user_id, user_email, section, items, subtotal, total,
+                    totalCost, totalProfit, profitMargin, payment_method,
+                    customer_name, customer_phone, timestamp
+                };
+            } else if (table === 'suppliers') {
+                // Only include valid columns for suppliers table
+                const {
+                    section, name, phone, email, address, products,
+                    created_by, created_at, updated_by, updated_at,
+                    deleted, deleted_at
+                } = dataForSupabase;
+                
+                dataForSupabase = {
+                    section, name, phone, email, address, products,
+                    created_by, created_at, updated_by, updated_at,
+                    deleted, deleted_at
+                };
+            } else if (table === 'purchase_orders') {
+                // Only include valid columns for purchase_orders table
+                const {
+                    section, orderNumber, supplierId, supplierName,
+                    productId, productName, quantity, cost, total,
+                    orderDate, status, receivedDate, created_by, created_at,
+                    updated_by, updated_at, deleted, deleted_at
+                } = dataForSupabase;
+                
+                dataForSupabase = {
+                    section, orderNumber, supplierId, supplierName,
+                    productId, productName, quantity, cost, total,
+                    orderDate, status, receivedDate, created_by, created_at,
+                    updated_by, updated_at, deleted, deleted_at
+                };
             }
             
             let result;
@@ -404,7 +462,7 @@ async function saveDataToSupabase(table, data, id = null) {
                 console.log(`Updating record with ID: ${id}`);
                 const { data: resultData, error } = await supabase
                     .from(table)
-                    .update(dataForSupabase) // Use the clean data
+                    .update(dataForSupabase)
                     .eq('id', id)
                     .select();
                 
@@ -418,7 +476,7 @@ async function saveDataToSupabase(table, data, id = null) {
                 console.log(`Inserting new record into ${table}`);
                 const { data: resultData, error } = await supabase
                     .from(table)
-                    .insert(dataForSupabase) // Use the clean data
+                    .insert(dataForSupabase)
                     .select();
                 
                 if (error) {
@@ -449,7 +507,7 @@ async function saveDataToSupabase(table, data, id = null) {
             console.error(`Error saving to ${table}:`, error);
             showNotification(`Error saving to ${table}: ${error.message}`, 'error');
             
-            // Store for later sync (this part is okay)
+            // Store for later sync
             const pendingChanges = loadFromLocalStorage('pendingChanges', {});
             if (!pendingChanges[table]) pendingChanges[table] = {};
             
@@ -464,7 +522,7 @@ async function saveDataToSupabase(table, data, id = null) {
             return { id };
         }
     } else {
-        // Store for later sync (this part is okay)
+        // Store for later sync
         const pendingChanges = loadFromLocalStorage('pendingChanges', {});
         if (!pendingChanges[table]) pendingChanges[table] = {};
         
@@ -566,19 +624,72 @@ async function syncPendingChanges() {
         
         // Process each table with pending changes
         Object.keys(pendingChanges).forEach(table => {
-            // Skip tables that don't exist in Supabase
-            if (table === 'suppliers' || table === 'purchase_orders' || table === 'purchase_data') {
-                console.log(`Skipping ${table} as it may not exist in Supabase yet`);
-                return;
-            }
-            
             // Process new documents
             if (pendingChanges[table].new && pendingChanges[table].new.length > 0) {
                 pendingChanges[table].new.forEach(data => {
+                    // Create a clean copy of the data for Supabase
+                    let dataForSupabase = { ...data };
+                    delete dataForSupabase.isOffline;
+                    delete dataForSupabase.timestamp;
+                    delete dataForSupabase.id; // Let Supabase generate the ID
+                    
+                    // Table-specific data cleaning (same as in saveDataToSupabase)
+                    if (table === 'inventory') {
+                        const {
+                            section, name, price, cost, stock, expiry_date,
+                            description, status, created_by, created_at,
+                            updated_by, updated_at, deleted, deleted_at
+                        } = dataForSupabase;
+                        
+                        dataForSupabase = {
+                            section, name, price, cost, stock, expiry_date,
+                            description, status, created_by, created_at,
+                            updated_by, updated_at, deleted, deleted_at
+                        };
+                    } else if (table === 'sales') {
+                        const {
+                            user_id, user_email, section, items, subtotal, total,
+                            totalCost, totalProfit, profitMargin, payment_method,
+                            customer_name, customer_phone, timestamp
+                        } = dataForSupabase;
+                        
+                        dataForSupabase = {
+                            user_id, user_email, section, items, subtotal, total,
+                            totalCost, totalProfit, profitMargin, payment_method,
+                            customer_name, customer_phone, timestamp
+                        };
+                    } else if (table === 'suppliers') {
+                        const {
+                            section, name, phone, email, address, products,
+                            created_by, created_at, updated_by, updated_at,
+                            deleted, deleted_at
+                        } = dataForSupabase;
+                        
+                        dataForSupabase = {
+                            section, name, phone, email, address, products,
+                            created_by, created_at, updated_by, updated_at,
+                            deleted, deleted_at
+                        };
+                    } else if (table === 'purchase_orders') {
+                        const {
+                            section, orderNumber, supplierId, supplierName,
+                            productId, productName, quantity, cost, total,
+                            orderDate, status, receivedDate, created_by, created_at,
+                            updated_by, updated_at, deleted, deleted_at
+                        } = dataForSupabase;
+                        
+                        dataForSupabase = {
+                            section, orderNumber, supplierId, supplierName,
+                            productId, productName, quantity, cost, total,
+                            orderDate, status, receivedDate, created_by, created_at,
+                            updated_by, updated_at, deleted, deleted_at
+                        };
+                    }
+                    
                     promises.push(
                         supabase
                             .from(table)
-                            .insert(data)
+                            .insert(dataForSupabase)
                             .select()
                             .then(({ data: result, error }) => {
                                 if (error) {
@@ -596,6 +707,20 @@ async function syncPendingChanges() {
                                         inventory[data.section][index].isOffline = false;
                                         saveToLocalStorage(`inventory_${data.section}`, inventory[data.section]);
                                     }
+                                } else if (table === 'suppliers') {
+                                    const index = suppliers[data.section].findIndex(item => item.id === data.id);
+                                    if (index !== -1) {
+                                        suppliers[data.section][index].id = result[0].id;
+                                        suppliers[data.section][index].isOffline = false;
+                                        saveToLocalStorage(`suppliers_${data.section}`, suppliers[data.section]);
+                                    }
+                                } else if (table === 'purchase_orders') {
+                                    const index = purchaseOrders[data.section].findIndex(item => item.id === data.id);
+                                    if (index !== -1) {
+                                        purchaseOrders[data.section][index].id = result[0].id;
+                                        purchaseOrders[data.section][index].isOffline = false;
+                                        saveToLocalStorage(`purchaseOrders_${data.section}`, purchaseOrders[data.section]);
+                                    }
                                 }
                                 return result[0];
                             })
@@ -607,10 +732,69 @@ async function syncPendingChanges() {
             Object.keys(pendingChanges[table]).forEach(id => {
                 if (id !== 'new' && pendingChanges[table][id]) {
                     const data = pendingChanges[table][id];
+                    
+                    // Create a clean copy of the data for Supabase
+                    let dataForSupabase = { ...data };
+                    delete dataForSupabase.isOffline;
+                    delete dataForSupabase.timestamp;
+                    
+                    // Table-specific data cleaning (same as in saveDataToSupabase)
+                    if (table === 'inventory') {
+                        const {
+                            section, name, price, cost, stock, expiry_date,
+                            description, status, created_by, created_at,
+                            updated_by, updated_at, deleted, deleted_at
+                        } = dataForSupabase;
+                        
+                        dataForSupabase = {
+                            section, name, price, cost, stock, expiry_date,
+                            description, status, created_by, created_at,
+                            updated_by, updated_at, deleted, deleted_at
+                        };
+                    } else if (table === 'sales') {
+                        const {
+                            user_id, user_email, section, items, subtotal, total,
+                            totalCost, totalProfit, profitMargin, payment_method,
+                            customer_name, customer_phone, timestamp
+                        } = dataForSupabase;
+                        
+                        dataForSupabase = {
+                            user_id, user_email, section, items, subtotal, total,
+                            totalCost, totalProfit, profitMargin, payment_method,
+                            customer_name, customer_phone, timestamp
+                        };
+                    } else if (table === 'suppliers') {
+                        const {
+                            section, name, phone, email, address, products,
+                            created_by, created_at, updated_by, updated_at,
+                            deleted, deleted_at
+                        } = dataForSupabase;
+                        
+                        dataForSupabase = {
+                            section, name, phone, email, address, products,
+                            created_by, created_at, updated_by, updated_at,
+                            deleted, deleted_at
+                        };
+                    } else if (table === 'purchase_orders') {
+                        const {
+                            section, orderNumber, supplierId, supplierName,
+                            productId, productName, quantity, cost, total,
+                            orderDate, status, receivedDate, created_by, created_at,
+                            updated_by, updated_at, deleted, deleted_at
+                        } = dataForSupabase;
+                        
+                        dataForSupabase = {
+                            section, orderNumber, supplierId, supplierName,
+                            productId, productName, quantity, cost, total,
+                            orderDate, status, receivedDate, created_by, created_at,
+                            updated_by, updated_at, deleted, deleted_at
+                        };
+                    }
+                    
                     promises.push(
                         supabase
                             .from(table)
-                            .update(data)
+                            .update(dataForSupabase)
                             .eq('id', id)
                             .select()
                             .then(({ data: result, error }) => {
@@ -677,6 +861,46 @@ async function loadDataFromSupabase() {
                 });
         });
         
+        // Load suppliers
+        sections.forEach(section => {
+            supabase
+                .from('suppliers')
+                .select('*')
+                .eq('section', section)
+                .then(({ data, error }) => {
+                    if (error) {
+                        console.error(`Error loading ${section} suppliers:`, error);
+                        showNotification(`Error loading ${section} suppliers. Using cached data.`, 'warning');
+                        return;
+                    }
+                    
+                    console.log(`Loaded ${section} suppliers:`, data);
+                    suppliers[section] = data || [];
+                    saveToLocalStorage(`suppliers_${section}`, suppliers[section]);
+                    loadSuppliersTable(section);
+                });
+        });
+        
+        // Load purchase orders
+        sections.forEach(section => {
+            supabase
+                .from('purchase_orders')
+                .select('*')
+                .eq('section', section)
+                .then(({ data, error }) => {
+                    if (error) {
+                        console.error(`Error loading ${section} purchase orders:`, error);
+                        showNotification(`Error loading ${section} purchase orders. Using cached data.`, 'warning');
+                        return;
+                    }
+                    
+                    console.log(`Loaded ${section} purchase orders:`, data);
+                    purchaseOrders[section] = data || [];
+                    saveToLocalStorage(`purchaseOrders_${section}`, purchaseOrders[section]);
+                    loadPurchaseOrdersTable(section);
+                });
+        });
+        
         // Load sales data
         sections.forEach(section => {
             supabase
@@ -727,6 +951,59 @@ async function loadDataFromSupabase() {
                                     salesData[section] = initialSalesData;
                                     saveToLocalStorage(`salesData_${section}`, salesData[section]);
                                     updateReports(section);
+                                    updateDepartmentStats(section);
+                                }
+                            });
+                    }
+                });
+        });
+        
+        // Load purchase data
+        sections.forEach(section => {
+            supabase
+                .from('purchase_data')
+                .select('*')
+                .eq('id', section)
+                .single()
+                .then(({ data, error }) => {
+                    if (error && error.code !== 'PGRST116') { // Not found error
+                        console.error(`Error loading ${section} purchase data:`, error);
+                        showNotification(`Error loading ${section} purchase data. Using cached data.`, 'warning');
+                        return;
+                    }
+                    
+                    console.log(`Loaded ${section} purchase data:`, data);
+                    if (data) {
+                        purchaseData[section] = {
+                            totalPurchases: data.totalPurchases || 0,
+                            totalTransactions: data.totalTransactions || 0,
+                            avgTransaction: data.avgTransaction || 0,
+                            topSupplier: data.topSupplier || '-',
+                            dailyPurchases: data.dailyPurchases || 0,
+                            dailyTransactions: data.dailyTransactions || 0
+                        };
+                        saveToLocalStorage(`purchaseData_${section}`, purchaseData[section]);
+                        updatePurchaseReports(section);
+                        updateDepartmentStats(section);
+                    } else {
+                        // If no data exists, create initial record
+                        const initialPurchaseData = {
+                            id: section,
+                            totalPurchases: 0,
+                            totalTransactions: 0,
+                            avgTransaction: 0,
+                            topSupplier: '-',
+                            dailyPurchases: 0,
+                            dailyTransactions: 0
+                        };
+                        supabase
+                            .from('purchase_data')
+                            .insert(initialPurchaseData)
+                            .then(({ data, error }) => {
+                                if (!error) {
+                                    purchaseData[section] = initialPurchaseData;
+                                    saveToLocalStorage(`purchaseData_${section}`, purchaseData[section]);
+                                    updatePurchaseReports(section);
                                     updateDepartmentStats(section);
                                 }
                             });
