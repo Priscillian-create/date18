@@ -7,6 +7,8 @@
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" sizes="32x32" href="icons/favicon-32.svg">
+    <link rel="apple-touch-icon" href="icons/icon-192.svg">
     <meta name="theme-color" content="#e67e22">
     
     <!-- FIXED: Added the new meta tag and kept the old one for compatibility -->
@@ -48,13 +50,30 @@
                     <div id="email-login-error" class="error-message"></div>
                     <button type="submit" class="login-btn" id="emailLoginBtn">Sign In</button>
                     <a href="#" class="forgot-password" id="forgotPasswordLink">Forgot Password?</a>
+                    <div style="margin-top: 1rem; text-align:center;">
+                        <button type="button" class="logout-btn" id="installBtnLogin" style="display:none;"><i class="fas fa-download"></i> Install App</button>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- Main App (Hidden by default) -->
-    <div id="mainApp" style="display: none;">
+    <div id="saleDetailsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Sale Details</h3>
+                <button class="modal-close js-modal-close" data-target="saleDetailsModal">&times;</button>
+            </div>
+            <div class="modal-body" id="saleDetailsBody"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary js-modal-close" data-target="saleDetailsModal">Close</button>
+                <button class="btn btn-primary" id="deleteSaleBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp">
         <!-- Header -->
         <header>
             <div class="header-container">
@@ -68,6 +87,7 @@
                         <div class="user-role">Administrator</div>
                     </div>
                     <div class="user-avatar" id="userAvatar">AU</div>
+                    <button class="logout-btn" id="installBtn" style="display:none;"><i class="fas fa-download"></i> Install App</button>
                     <button class="logout-btn" id="logoutBtn">Logout</button>
                 </div>
             </div>
@@ -88,6 +108,12 @@
                     </div>
                     <div class="nav-tab food" data-section="food">
                         <i class="fas fa-shopping-basket"></i> Food Supplies
+                    </div>
+                    <div class="nav-tab pos_mart" data-section="pos_mart">
+                        <i class="fas fa-credit-card"></i> POS (MART)
+                    </div>
+                    <div class="nav-tab pos1" data-section="pos1">
+                        <i class="fas fa-credit-card"></i> POS1
                     </div>
                     <div class="nav-tab" data-section="total-inventory">
                         <i class="fas fa-warehouse"></i> Total Inventory
@@ -121,6 +147,14 @@
                             <div class="stat-value grill-stat" id="grill-low-stock">0</div>
                             <div class="stat-label">Low Stock Items</div>
                         </div>
+                        <div class="stat-item">
+                            <div class="stat-value grill-stat" id="grill-daily-cash-balance">₦0.00</div>
+                            <div class="stat-label">End of Day Cash</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value grill-stat" id="grill-daily-pos-balance">₦0.00</div>
+                            <div class="stat-label">End of Day POS</div>
+                        </div>
                     </div>
                 </div>
 
@@ -131,12 +165,16 @@
                     <div class="sub-nav-item grill" data-view="inventory">
                         <i class="fas fa-warehouse"></i> Inventory
                     </div>
+                    <div class="sub-nav-item grill" data-view="categories">
+                        <i class="fas fa-layer-group"></i> Categories
+                    </div>
                     <div class="sub-nav-item grill" data-view="reports">
                         <i class="fas fa-chart-bar"></i> Sales Reports
                     </div>
                     <div class="sub-nav-item grill" data-view="financial">
                         <i class="fas fa-chart-line"></i> Financial Reports
                     </div>
+                    
                     <div class="sub-nav-item grill" data-view="suppliers">
                         <i class="fas fa-truck"></i> Suppliers
                     </div>
@@ -317,6 +355,63 @@
                     </div>
                 </div>
 
+                <div id="grill-categories-view" class="view-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Grill Categories</h2>
+                        </div>
+                        <div class="category-list">
+                            <button class="category-list-item js-section-tab active" data-section="grill" data-target-view="pos"><i class="fas fa-cash-register"></i> Point of Sale</button>
+                            <button class="category-list-item js-section-tab" data-section="grill" data-target-view="inventory"><i class="fas fa-warehouse"></i> Inventory</button>
+                            <button class="category-list-item js-section-tab" data-section="grill" data-target-view="reports"><i class="fas fa-chart-bar"></i> Sales Reports</button>
+                            <button class="category-list-item js-section-tab" data-section="grill" data-target-view="financial"><i class="fas fa-chart-line"></i> Financial Reports</button>
+                            <button class="category-list-item js-section-tab" data-section="grill" data-target-view="suppliers"><i class="fas fa-truck"></i> Suppliers</button>
+                            <button class="category-list-item js-section-tab" data-section="grill" data-target-view="purchase-orders"><i class="fas fa-file-invoice"></i> Purchase Orders</button>
+                            <button class="category-list-item js-section-tab" data-section="grill" data-target-view="account"><i class="fas fa-user"></i> My Account</button>
+                            <button class="category-list-item js-section-tab" data-section="grill" data-target-view="daily-balances"><i class="fas fa-calendar-check"></i> Daily Balances</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="grill-daily-balances-view" class="view-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Record Daily Balances</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label" for="grill-daily-balance-date">Date</label>
+                                    <input type="date" class="form-input" id="grill-daily-balance-date" autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="grill-closing-cash-input">Closing Cash</label>
+                                    <input class="form-input" id="grill-closing-cash-input" type="number" step="0.01" autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="grill-closing-pos-input">Closing POS</label>
+                                    <input class="form-input" id="grill-closing-pos-input" type="number" step="0.01" autocomplete="off">
+                                </div>
+                                <div class="form-actions">
+                                    <button class="btn btn-primary js-save-daily-balance-btn" data-section="grill">Save Balance</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <table class="inventory-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Cash</th>
+                                        <th>POS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="grill-daily-balances-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Grill Reports View -->
                 <div id="grill-reports-view" class="view-content">
                     <div class="card">
@@ -386,6 +481,22 @@
                                 <div class="summary-label">Profit Margin</div>
                             </div>
                         </div>
+                        <div class="top-sellers-block">
+                            <div class="card-subtitle">Top Selling Items</div>
+                            <div id="grill-top-sellers" class="top-sellers"></div>
+                        </div>
+                        <div class="top-sellers-block">
+                            <div class="card-subtitle">Top Selling Items</div>
+                            <div id="wholesale-top-sellers" class="top-sellers"></div>
+                        </div>
+                        <div class="top-sellers-block">
+                            <div class="card-subtitle">Top Selling Items</div>
+                            <div id="building-top-sellers" class="top-sellers"></div>
+                        </div>
+                        <div class="top-sellers-block">
+                            <div class="card-subtitle">Top Selling Items</div>
+                            <div id="food-top-sellers" class="top-sellers"></div>
+                        </div>
                         <div class="chart-container">
                             <div class="empty-state">
                                 <div class="empty-state-icon">
@@ -395,8 +506,10 @@
                                 <p class="empty-state-description">Start making sales to generate reports and see your business performance.</p>
                             </div>
                         </div>
+                        <div class="card-body js-sales-container" data-section="grill"></div>
                     </div>
                 </div>
+                
 
                 <!-- Grill Financial Reports View -->
                 <div id="grill-financial-view" class="view-content">
@@ -480,6 +593,9 @@
                                 <div class="financial-value" id="grill-financial-inventory-profit-margin">0%</div>
                                 <div class="financial-label">Inventory Profit Margin</div>
                             </div>
+                        </div>
+                        <div class="info-note">
+                            Total Sales and Purchases are cumulative. Total Profit equals Sales minus Purchases cost. Profit Margin is Profit divided by Sales. Inventory Value/Cost reflect current stock at selling price and cost price respectively.
                         </div>
                         <div class="chart-container">
                             <div class="empty-state">
@@ -567,6 +683,12 @@
                             </div>
                         </div>
                     </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Grill Purchases</h2>
+                        </div>
+                        <div class="card-body js-purchases-container" data-section="grill"></div>
+                    </div>
                 </div>
 
                 <!-- Grill Account View -->
@@ -652,6 +774,14 @@
                             <div class="stat-value wholesale-stat" id="wholesale-low-stock">0</div>
                             <div class="stat-label">Low Stock Items</div>
                         </div>
+                        <div class="stat-item">
+                            <div class="stat-value wholesale-stat" id="wholesale-daily-cash-balance">₦0.00</div>
+                            <div class="stat-label">End of Day Cash</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value wholesale-stat" id="wholesale-daily-pos-balance">₦0.00</div>
+                            <div class="stat-label">End of Day POS</div>
+                        </div>
                     </div>
                 </div>
 
@@ -662,12 +792,16 @@
                     <div class="sub-nav-item wholesale" data-view="inventory">
                         <i class="fas fa-warehouse"></i> Inventory
                     </div>
+                    <div class="sub-nav-item wholesale" data-view="categories">
+                        <i class="fas fa-layer-group"></i> Categories
+                    </div>
                     <div class="sub-nav-item wholesale" data-view="reports">
                         <i class="fas fa-chart-bar"></i> Sales Reports
                     </div>
                     <div class="sub-nav-item wholesale" data-view="financial">
                         <i class="fas fa-chart-line"></i> Financial Reports
                     </div>
+                    
                     <div class="sub-nav-item wholesale" data-view="suppliers">
                         <i class="fas fa-truck"></i> Suppliers
                     </div>
@@ -848,6 +982,63 @@
                     </div>
                 </div>
 
+                <div id="wholesale-categories-view" class="view-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Wholesale Categories</h2>
+                        </div>
+                        <div class="category-list">
+                            <button class="category-list-item js-section-tab active" data-section="wholesale" data-target-view="pos"><i class="fas fa-cash-register"></i> Point of Sale</button>
+                            <button class="category-list-item js-section-tab" data-section="wholesale" data-target-view="inventory"><i class="fas fa-warehouse"></i> Inventory</button>
+                            <button class="category-list-item js-section-tab" data-section="wholesale" data-target-view="reports"><i class="fas fa-chart-bar"></i> Sales Reports</button>
+                            <button class="category-list-item js-section-tab" data-section="wholesale" data-target-view="financial"><i class="fas fa-chart-line"></i> Financial Reports</button>
+                            <button class="category-list-item js-section-tab" data-section="wholesale" data-target-view="suppliers"><i class="fas fa-truck"></i> Suppliers</button>
+                            <button class="category-list-item js-section-tab" data-section="wholesale" data-target-view="purchase-orders"><i class="fas fa-file-invoice"></i> Purchase Orders</button>
+                            <button class="category-list-item js-section-tab" data-section="wholesale" data-target-view="account"><i class="fas fa-user"></i> My Account</button>
+                            <button class="category-list-item js-section-tab" data-section="wholesale" data-target-view="daily-balances"><i class="fas fa-calendar-check"></i> Daily Balances</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="wholesale-daily-balances-view" class="view-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Record Daily Balances</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label" for="wholesale-daily-balance-date">Date</label>
+                                    <input type="date" class="form-input" id="wholesale-daily-balance-date" autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="wholesale-closing-cash-input">Closing Cash</label>
+                                    <input class="form-input" id="wholesale-closing-cash-input" type="number" step="0.01" autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="wholesale-closing-pos-input">Closing POS</label>
+                                    <input class="form-input" id="wholesale-closing-pos-input" type="number" step="0.01" autocomplete="off">
+                                </div>
+                                <div class="form-actions">
+                                    <button class="btn btn-primary js-save-daily-balance-btn" data-section="wholesale">Save Balance</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <table class="inventory-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Cash</th>
+                                        <th>POS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="wholesale-daily-balances-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Wholesale Reports View -->
                 <div id="wholesale-reports-view" class="view-content">
                     <div class="card">
@@ -926,6 +1117,23 @@
                                 <p class="empty-state-description">Start making sales to generate reports and see your business performance.</p>
                             </div>
                         </div>
+                        <div class="card-body js-sales-container" data-section="wholesale"></div>
+                    </div>
+                </div>
+                <div id="wholesale-sales-view" class="view-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Wholesale Sales History</h2>
+                        </div>
+                        <div class="card-body js-sales-container" data-section="wholesale"></div>
+                    </div>
+                </div>
+                <div id="wholesale-purchases-view" class="view-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Wholesale Purchases History</h2>
+                        </div>
+                        <div class="card-body js-purchases-container" data-section="wholesale"></div>
                     </div>
                 </div>
 
@@ -1098,6 +1306,12 @@
                             </div>
                         </div>
                     </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Wholesale Purchases</h2>
+                        </div>
+                        <div class="card-body js-purchases-container" data-section="wholesale"></div>
+                    </div>
                 </div>
 
                 <!-- Wholesale Account View -->
@@ -1183,6 +1397,14 @@
                             <div class="stat-value building-stat" id="building-low-stock">0</div>
                             <div class="stat-label">Low Stock Items</div>
                         </div>
+                        <div class="stat-item">
+                            <div class="stat-value building-stat" id="building-daily-cash-balance">₦0.00</div>
+                            <div class="stat-label">End of Day Cash</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value building-stat" id="building-daily-pos-balance">₦0.00</div>
+                            <div class="stat-label">End of Day POS</div>
+                        </div>
                     </div>
                 </div>
 
@@ -1193,12 +1415,16 @@
                     <div class="sub-nav-item building" data-view="inventory">
                         <i class="fas fa-warehouse"></i> Inventory
                     </div>
+                    <div class="sub-nav-item building" data-view="categories">
+                        <i class="fas fa-layer-group"></i> Categories
+                    </div>
                     <div class="sub-nav-item building" data-view="reports">
                         <i class="fas fa-chart-bar"></i> Sales Reports
                     </div>
                     <div class="sub-nav-item building" data-view="financial">
                         <i class="fas fa-chart-line"></i> Financial Reports
                     </div>
+                    
                     <div class="sub-nav-item building" data-view="suppliers">
                         <i class="fas fa-truck"></i> Suppliers
                     </div>
@@ -1379,6 +1605,24 @@
                     </div>
                 </div>
 
+                <div id="building-categories-view" class="view-content">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Building Material Categories</h2>
+                            </div>
+                        <div class="category-list">
+                            <button class="category-list-item js-section-tab active" data-section="building" data-target-view="pos"><i class="fas fa-cash-register"></i> Point of Sale</button>
+                            <button class="category-list-item js-section-tab" data-section="building" data-target-view="inventory"><i class="fas fa-warehouse"></i> Inventory</button>
+                            <button class="category-list-item js-section-tab" data-section="building" data-target-view="reports"><i class="fas fa-chart-bar"></i> Sales Reports</button>
+                            <button class="category-list-item js-section-tab" data-section="building" data-target-view="financial"><i class="fas fa-chart-line"></i> Financial Reports</button>
+                            <button class="category-list-item js-section-tab" data-section="building" data-target-view="suppliers"><i class="fas fa-truck"></i> Suppliers</button>
+                            <button class="category-list-item js-section-tab" data-section="building" data-target-view="purchase-orders"><i class="fas fa-file-invoice"></i> Purchase Orders</button>
+                            <button class="category-list-item js-section-tab" data-section="building" data-target-view="account"><i class="fas fa-user"></i> My Account</button>
+                            <button class="category-list-item js-section-tab" data-section="building" data-target-view="daily-balances"><i class="fas fa-calendar-check"></i> Daily Balances</button>
+                        </div>
+                        </div>
+                    </div>
+
                 <!-- Building Reports View -->
                 <div id="building-reports-view" class="view-content">
                     <div class="card">
@@ -1457,6 +1701,62 @@
                                 <p class="empty-state-description">Start making sales to generate reports and see your business performance.</p>
                             </div>
                         </div>
+                        <div class="card-body js-sales-container" data-section="building"></div>
+                    </div>
+                </div>
+
+                <div id="building-daily-balances-view" class="view-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Record Daily Balances</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label" for="building-daily-balance-date">Date</label>
+                                    <input type="date" class="form-input" id="building-daily-balance-date" autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="building-closing-cash-input">Closing Cash</label>
+                                    <input class="form-input" id="building-closing-cash-input" type="number" step="0.01" autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="building-closing-pos-input">Closing POS</label>
+                                    <input class="form-input" id="building-closing-pos-input" type="number" step="0.01" autocomplete="off">
+                                </div>
+                                <div class="form-actions">
+                                    <button class="btn btn-primary js-save-daily-balance-btn" data-section="building">Save Balance</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <table class="inventory-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Cash</th>
+                                        <th>POS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="building-daily-balances-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div id="building-sales-view" class="view-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Building Sales History</h2>
+                        </div>
+                        <div class="card-body js-sales-container" data-section="building"></div>
+                    </div>
+                </div>
+                <div id="building-purchases-view" class="view-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Building Purchases History</h2>
+                        </div>
+                        <div class="card-body js-purchases-container" data-section="building"></div>
                     </div>
                 </div>
 
@@ -1629,6 +1929,12 @@
                             </div>
                         </div>
                     </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Building Purchases</h2>
+                        </div>
+                        <div class="card-body js-purchases-container" data-section="building"></div>
+                    </div>
                 </div>
 
                 <!-- Building Account View -->
@@ -1714,6 +2020,14 @@
                             <div class="stat-value food-stat" id="food-low-stock">0</div>
                             <div class="stat-label">Low Stock Items</div>
                         </div>
+                        <div class="stat-item">
+                            <div class="stat-value food-stat" id="food-daily-cash-balance">₦0.00</div>
+                            <div class="stat-label">End of Day Cash</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value food-stat" id="food-daily-pos-balance">₦0.00</div>
+                            <div class="stat-label">End of Day POS</div>
+                        </div>
                     </div>
                 </div>
 
@@ -1724,12 +2038,16 @@
                     <div class="sub-nav-item food" data-view="inventory">
                         <i class="fas fa-warehouse"></i> Inventory
                     </div>
+                    <div class="sub-nav-item food" data-view="categories">
+                        <i class="fas fa-layer-group"></i> Categories
+                    </div>
                     <div class="sub-nav-item food" data-view="reports">
                         <i class="fas fa-chart-bar"></i> Sales Reports
                     </div>
                     <div class="sub-nav-item food" data-view="financial">
                         <i class="fas fa-chart-line"></i> Financial Reports
                     </div>
+                    
                     <div class="sub-nav-item food" data-view="suppliers">
                         <i class="fas fa-truck"></i> Suppliers
                     </div>
@@ -1910,6 +2228,63 @@
                     </div>
                 </div>
 
+                <div id="food-categories-view" class="view-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Food Supplies Categories</h2>
+                        </div>
+                        <div class="category-list">
+                            <button class="category-list-item js-section-tab active" data-section="food" data-target-view="pos"><i class="fas fa-cash-register"></i> Point of Sale</button>
+                            <button class="category-list-item js-section-tab" data-section="food" data-target-view="inventory"><i class="fas fa-warehouse"></i> Inventory</button>
+                            <button class="category-list-item js-section-tab" data-section="food" data-target-view="reports"><i class="fas fa-chart-bar"></i> Sales Reports</button>
+                            <button class="category-list-item js-section-tab" data-section="food" data-target-view="financial"><i class="fas fa-chart-line"></i> Financial Reports</button>
+                            <button class="category-list-item js-section-tab" data-section="food" data-target-view="suppliers"><i class="fas fa-truck"></i> Suppliers</button>
+                            <button class="category-list-item js-section-tab" data-section="food" data-target-view="purchase-orders"><i class="fas fa-file-invoice"></i> Purchase Orders</button>
+                            <button class="category-list-item js-section-tab" data-section="food" data-target-view="account"><i class="fas fa-user"></i> My Account</button>
+                            <button class="category-list-item js-section-tab" data-section="food" data-target-view="daily-balances"><i class="fas fa-calendar-check"></i> Daily Balances</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="food-daily-balances-view" class="view-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Record Daily Balances</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label" for="food-daily-balance-date">Date</label>
+                                    <input type="date" class="form-input" id="food-daily-balance-date" autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="food-closing-cash-input">Closing Cash</label>
+                                    <input class="form-input" id="food-closing-cash-input" type="number" step="0.01" autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="food-closing-pos-input">Closing POS</label>
+                                    <input class="form-input" id="food-closing-pos-input" type="number" step="0.01" autocomplete="off">
+                                </div>
+                                <div class="form-actions">
+                                    <button class="btn btn-primary js-save-daily-balance-btn" data-section="food">Save Balance</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <table class="inventory-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Cash</th>
+                                        <th>POS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="food-daily-balances-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Food Reports View -->
                 <div id="food-reports-view" class="view-content">
                     <div class="card">
@@ -1988,6 +2363,23 @@
                                 <p class="empty-state-description">Start making sales to generate reports and see your business performance.</p>
                             </div>
                         </div>
+                        <div class="card-body js-sales-container" data-section="food"></div>
+                    </div>
+                </div>
+                <div id="food-sales-view" class="view-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Food Sales History</h2>
+                        </div>
+                        <div class="card-body js-sales-container" data-section="food"></div>
+                    </div>
+                </div>
+                <div id="food-purchases-view" class="view-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Food Purchases History</h2>
+                        </div>
+                        <div class="card-body js-purchases-container" data-section="food"></div>
                     </div>
                 </div>
 
@@ -2159,6 +2551,12 @@
                                 </button>
                             </div>
                         </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Food Purchases</h2>
+                        </div>
+                        <div class="card-body js-purchases-container" data-section="food"></div>
                     </div>
                 </div>
 
@@ -2593,26 +2991,306 @@
                 <div id="checkout-summary">
                     <!-- Checkout summary will be loaded here -->
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="paymentMethod">Payment Method</label>
-                    <select class="form-input" id="paymentMethod" autocomplete="off">
-                        <option value="cash">Cash</option>
-                        <option value="card">Card</option>
-                        <option value="transfer">Bank Transfer</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="customerName">Customer Name (Optional)</label>
-                    <input type="text" class="form-input" id="customerName" autocomplete="name">
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="customerPhone">Customer Phone (Optional)</label>
-                    <input type="tel" class="form-input" id="customerPhone" autocomplete="tel">
-                </div>
+                <form id="checkoutForm">
+                    <div class="form-group">
+                        <label class="form-label" for="paymentMethod">Payment Method</label>
+                        <select class="form-input" id="paymentMethod" autocomplete="off" data-label="Payment Method">
+                            <option value="cash">Cash</option>
+                            <option value="card">Card</option>
+                            <option value="transfer">Bank Transfer</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="customerName">Customer Name (Optional)</label>
+                        <input type="text" class="form-input" id="customerName" autocomplete="name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="customerPhone">Customer Phone (Optional)</label>
+                        <input type="tel" class="form-input" id="customerPhone" autocomplete="tel">
+                    </div>
+                </form>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary js-modal-close" data-target="checkoutModal">Cancel</button>
                 <button class="btn btn-primary js-complete-checkout-btn">Complete Sale</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POS (MART) Section -->
+    <div id="pos_mart-section" class="section-container">
+        
+        <div class="department-header">
+            
+            <div class="department-title">
+                <i class="fas fa-credit-card"></i> POS (MART) Department
+            </div>
+        <div class="department-date">
+            <label class="form-label" for="pos_mart-date-selector">Date</label>
+            <input type="date" class="form-input" id="pos_mart-date-selector" autocomplete="off">
+        </div>
+        <div class="department-stats">
+            <div class="stat-item">
+                <div class="stat-value" id="pos_mart-txn-total-volume">₦0.00</div>
+                <div class="stat-label">Total Volume</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos_mart-txn-total-charges">₦0.00</div>
+                <div class="stat-label">Total Charges</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos_mart-txn-total-transactions">0</div>
+                <div class="stat-label">Transactions</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos_mart-opening-cash">₦0.00</div>
+                <div class="stat-label">Opening Cash</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos_mart-opening-pos">₦0.00</div>
+                <div class="stat-label">Opening POS</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos_mart-opening-total">₦0.00</div>
+                <div class="stat-label">Opening Total</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos_mart-closing-cash">₦0.00</div>
+                <div class="stat-label">Closing Cash</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos_mart-closing-pos">₦0.00</div>
+                <div class="stat-label">Closing POS</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos_mart-closing-total">₦0.00</div>
+                <div class="stat-label">Closing Total</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos_mart-txn-machine-charges-today">₦0.00</div>
+                <div class="stat-label">Machine Charges (Today)</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos_mart-txn-profit-today">₦0.00</div>
+                <div class="stat-label">Net Profit (Today)</div>
+            </div>
+        </div>
+        </div>
+        <div class="view-content active" id="pos_mart-pos-view">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Record Transaction</h2>
+                </div>
+                <div class="card-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="pos_mart-txn-type">Type</label>
+                            <select class="form-input" id="pos_mart-txn-type" autocomplete="off">
+                                <option value="withdraw">Withdraw</option>
+                                <option value="transfer_in">Transfer In</option>
+                                <option value="transfer_out">Transfer Out</option>
+                                <option value="deposit">Deposit</option>
+                                <option value="bill_payment">Bill Payment</option>
+                                <option value="airtime">Airtime</option>
+                                <option value="data">Data</option>
+                                <option value="pos_purchase">POS Purchase</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="pos_mart-txn-amount">Amount</label>
+                            <input class="form-input" id="pos_mart-txn-amount" type="number" step="0.01" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="pos_mart-txn-charge">Merchant Charge</label>
+                            <input class="form-input" id="pos_mart-txn-charge" type="number" step="0.01" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="pos_mart-txn-pos-charge">POS Charge</label>
+                            <input class="form-input" id="pos_mart-txn-pos-charge" type="number" step="0.01" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="pos_mart-txn-phone">Customer Phone</label>
+                            <input class="form-input" id="pos_mart-txn-phone" type="tel" autocomplete="tel">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="pos_mart-txn-ref">Reference</label>
+                            <input class="form-input" id="pos_mart-txn-ref" type="text" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="pos_mart-txn-notes">Notes</label>
+                            <input class="form-input" id="pos_mart-txn-notes" type="text" autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="pos_mart-opening-cash-input">Opening Cash</label>
+                            <input class="form-input" id="pos_mart-opening-cash-input" type="number" step="0.01" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="pos_mart-opening-pos-input">Opening POS</label>
+                            <input class="form-input" id="pos_mart-opening-pos-input" type="number" step="0.01" autocomplete="off">
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-secondary js-set-opening-btn" data-section="pos_mart">Set Opening</button>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn btn-primary js-record-transaction-btn" data-section="pos_mart">Record Transaction</button>
+                    </div>
+                </div>
+            </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Transactions</h2>
+                        <div class="form-actions">
+                            <button class="btn btn-secondary js-export-transactions-btn" data-section="pos_mart">Export Daily Report</button>
+                        </div>
+                    </div>
+                    <div class="card-body js-transactions-container" data-section="pos_mart">
+                    <div class="empty-state">
+                        <div class="empty-state-icon"><i class="fas fa-receipt"></i></div>
+                        <h3 class="empty-state-title">No Transactions</h3>
+                        <p class="empty-state-description">Record your first transaction to see it here.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- POS1 Section -->
+    <div id="pos1-section" class="section-container">
+        <div class="department-header">
+            <div class="department-title">
+                <i class="fas fa-credit-card"></i> POS1 Department
+            </div>
+        <div class="department-date">
+            <label class="form-label" for="pos1-date-selector">Date</label>
+            <input type="date" class="form-input" id="pos1-date-selector" autocomplete="off">
+        </div>
+        <div class="department-stats">
+            <div class="stat-item">
+                <div class="stat-value" id="pos1-txn-total-volume">₦0.00</div>
+                <div class="stat-label">Total Volume</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos1-txn-total-charges">₦0.00</div>
+                <div class="stat-label">Total Charges</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos1-txn-total-transactions">0</div>
+                <div class="stat-label">Transactions</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos1-opening-cash">₦0.00</div>
+                <div class="stat-label">Opening Cash</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos1-opening-pos">₦0.00</div>
+                <div class="stat-label">Opening POS</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos1-opening-total">₦0.00</div>
+                <div class="stat-label">Opening Total</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos1-closing-cash">₦0.00</div>
+                <div class="stat-label">Closing Cash</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos1-closing-pos">₦0.00</div>
+                <div class="stat-label">Closing POS</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos1-closing-total">₦0.00</div>
+                <div class="stat-label">Closing Total</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos1-txn-machine-charges-today">₦0.00</div>
+                <div class="stat-label">Machine Charges (Today)</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pos1-txn-profit-today">₦0.00</div>
+                <div class="stat-label">Net Profit (Today)</div>
+            </div>
+        </div>
+        </div>
+        <div class="view-content active" id="pos1-pos-view">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Record Transaction</h2>
+                </div>
+                <div class="card-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="pos1-txn-type">Type</label>
+                            <select class="form-input" id="pos1-txn-type" autocomplete="off">
+                                <option value="withdraw">Withdraw</option>
+                                <option value="transfer_in">Transfer In</option>
+                                <option value="transfer_out">Transfer Out</option>
+                                <option value="deposit">Deposit</option>
+                                <option value="bill_payment">Bill Payment</option>
+                                <option value="airtime">Airtime</option>
+                                <option value="data">Data</option>
+                                <option value="pos_purchase">POS Purchase</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="pos1-txn-amount">Amount</label>
+                            <input class="form-input" id="pos1-txn-amount" type="number" step="0.01" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="pos1-txn-charge">Merchant Charge</label>
+                            <input class="form-input" id="pos1-txn-charge" type="number" step="0.01" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="pos1-txn-pos-charge">POS Charge</label>
+                            <input class="form-input" id="pos1-txn-pos-charge" type="number" step="0.01" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="pos1-txn-phone">Customer Phone</label>
+                            <input class="form-input" id="pos1-txn-phone" type="tel" autocomplete="tel">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="pos1-txn-ref">Reference</label>
+                            <input class="form-input" id="pos1-txn-ref" type="text" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="pos1-txn-notes">Notes</label>
+                            <input class="form-input" id="pos1-txn-notes" type="text" autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="pos1-opening-cash-input">Opening Cash</label>
+                            <input class="form-input" id="pos1-opening-cash-input" type="number" step="0.01" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="pos1-opening-pos-input">Opening POS</label>
+                            <input class="form-input" id="pos1-opening-pos-input" type="number" step="0.01" autocomplete="off">
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-secondary js-set-opening-btn" data-section="pos1">Set Opening</button>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn btn-primary js-record-transaction-btn" data-section="pos1">Record Transaction</button>
+                    </div>
+                </div>
+            </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Transactions</h2>
+                        <div class="form-actions">
+                            <button class="btn btn-secondary js-export-transactions-btn" data-section="pos1">Export Daily Report</button>
+                        </div>
+                    </div>
+                    <div class="card-body js-transactions-container" data-section="pos1">
+                    <div class="empty-state">
+                        <div class="empty-state-icon"><i class="fas fa-receipt"></i></div>
+                        <h3 class="empty-state-title">No Transactions</h3>
+                        <p class="empty-state-description">Record your first transaction to see it here.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
