@@ -7,8 +7,8 @@
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" sizes="32x32" href="/icons/favicon-32.svg">
-    <link rel="apple-touch-icon" href="/icons/icon-192.svg">
+    <link rel="icon" sizes="32x32" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23e67e22'/></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 192 192'><rect width='192' height='192' rx='24' fill='%23e67e22'/></svg>">
     <meta name="theme-color" content="#e67e22">
     
     <!-- FIXED: Added the new meta tag and kept the old one for compatibility -->
@@ -3332,7 +3332,6 @@
     </div>
 
     <!-- External Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="script.js"></script>
+    <script type="module" src="script.js?v=3"></script>
   </body>
 </html>

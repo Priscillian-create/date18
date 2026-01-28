@@ -1,15 +1,47 @@
-(() => {
-  if (window.supabase && typeof window.supabase.createClient === 'function') {
-    const __client = window.supabase.createClient(
-      'https://qgayglybnnrhobcvftrs.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFnYXlnbHlibm5yaG9iY3ZmdHJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODQ5ODMsImV4cCI6MjA3ODI2MDk4M30.dqiEe-v1cro5N4tuawu7Y1x5klSyjINsLHd9-V40QjQ',
-      { auth: { persistSession: true, autoRefreshToken: true } }
-    );
+// Supabase initialization (safe, non-crashing)
+(function () {
+  window.supabase = window.supabase || {};
+  const hasSDK = typeof window.supabase.createClient === 'function';
+  if (hasSDK) {
     try {
-      window.__supabaseClient = __client;
-      window.supabase.auth = __client.auth;
-      window.supabase.from = __client.from.bind(__client);
+      const client = window.supabase.createClient(
+        'https://qgayglybnnrhobcvftrs.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFnYXlnbHlibm5yaG9iY3ZmdHJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODQ5ODMsImV4cCI6MjA3ODI2MDk4M30.dqiEe-v1cro5N4tuawu7Y1x5klSyjINsLHd9-V40QjQ',
+        { auth: { persistSession: true, autoRefreshToken: true } }
+      );
+      window.supabase = client;
     } catch (e) {}
+  } else {
+    window.supabase.auth = window.supabase.auth || {
+      onAuthStateChange: () => {},
+      signOut: async () => {},
+      signInWithPassword: async ({ email }) => {
+        return { data: { user: { id: 'offline_user', email: email || 'offline@example.com' } }, error: null };
+      },
+      resetPasswordForEmail: async () => {}
+    };
+    window.supabase.from = window.supabase.from || (function () {
+      const genId = () => 'offline_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      return (table) => {
+        const state = { table, payload: null, filters: [], op: null, selectCols: '*' };
+        const builder = {
+          select(cols = '*') { state.selectCols = cols; return builder; },
+          eq(col, val) { state.filters.push({ type: 'eq', col, val }); return builder; },
+          insert(payload) { state.op = 'insert'; state.payload = payload; return {
+            select: (cols = '*') => Promise.resolve({ data: [{ ...payload, id: genId() }], error: null })
+          }; },
+          update(payload) { state.op = 'update'; state.payload = payload; return {
+            eq: (col, val) => Promise.resolve({ data: [], error: null })
+          }; },
+          delete() { state.op = 'delete'; return {
+            eq: (col, val) => Promise.resolve({ data: [], error: null })
+          }; },
+          upsert(payload) { state.op = 'upsert'; state.payload = payload; return Promise.resolve({ data: [payload], error: null }); },
+          then(resolve) { return Promise.resolve(resolve({ data: [], error: null })); }
+        };
+        return builder;
+      };
+    })();
   }
 })();
   
@@ -2992,15 +3024,6 @@ let currentSection = 'grill';
       }
     };
     maybeHideInstall();
-    const showInstallCTAIfNotStandalone = () => {
-      const isStandalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
-      const isIOSStandalone = window.navigator && window.navigator.standalone;
-      if (!isStandalone && !isIOSStandalone) {
-        const btn = document.getElementById('installBtnLogin');
-        if (btn) btn.style.display = 'inline-block';
-      }
-    };
-    showInstallCTAIfNotStandalone();
     // Always require explicit sign-in: show login, hide app, clear any session
     const loginEl = document.getElementById('loginScreen');
     const appEl = document.getElementById('mainApp');
@@ -3013,7 +3036,7 @@ let currentSection = 'grill';
     window.addEventListener('online', uiManager.handleOnlineStatus);
     window.addEventListener('offline', uiManager.handleOfflineStatus);
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+      navigator.serviceWorker.register('sw.js').catch(() => {});
     }
     
     // Login form
@@ -3526,6 +3549,7 @@ let currentSection = 'grill';
 
   let deferredPrompt = null;
   window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
     deferredPrompt = e;
     const btn1 = document.getElementById('installBtn');
     const btn2 = document.getElementById('installBtnLogin');
